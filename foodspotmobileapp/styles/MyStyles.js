@@ -26,6 +26,11 @@ const MyStyles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  cate: {
+    flexDirection: "row",
+    height: 80,
+  },
+
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -83,7 +88,6 @@ const MyStyles = StyleSheet.create({
     elevation: 2,
   },
   
-
   productImage: {
     width: "100%",
     height: 200,

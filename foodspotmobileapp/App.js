@@ -4,15 +4,20 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from "./components/customer/Home";
 import Login from './components/customer/Login';
+import Cart from './components/customer/Cart';
+import Notification from './components/customer/Notification';
 import { Icon } from "react-native-paper";
+
 
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Home" component={Home} options={{tabBarIcon: () => <Icon size={30} source="home" />}} />
-      <Tab.Screen name="Account" component={Login} options={{tabBarIcon: () => <Icon size={30} source="account" />}} />
+      <Tab.Screen name="Home" component={Home} options={{tabBarIcon: () => <Icon size={30} source="home" />}}/>
+      <Tab.Screen name="Cart" component={Cart} options={{tabBarIcon: () => <Icon size={30} source="cart" />}}/>
+      <Tab.Screen name="Notifications" component={Notification} options={{ tabBarIcon: () => <Icon size={30} source="bell" /> }}/>
+      <Tab.Screen name="Account" component={Login} options={{tabBarIcon: () => <Icon size={30} source="account" />}}/>
     </Tab.Navigator>
   );
 };
