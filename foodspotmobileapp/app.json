@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.tranquangtruong25.foodspotmobileapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"

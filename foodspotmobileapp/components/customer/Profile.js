@@ -35,11 +35,15 @@ const Profile = () => {
       <Text style={MyStyles.subject}>
         {userData.first_name || "Không có"} {userData.last_name || "tên"}
       </Text>
-      <Text style={MyStyles.margin}>Email: {userData.email || "Không có email"}</Text>
+      <Text style={MyStyles.margin}>
+        Email: {userData.email || "Không có email"}
+      </Text>
       <Text style={MyStyles.margin}>
         Số điện thoại: {userData.phone_number || "Chưa cung cấp"}
       </Text>
-      <Text style={MyStyles.margin}>Vai trò: {userData.role || "Không xác định"}</Text>
+      <Text style={MyStyles.margin}>
+        Vai trò: {userData.role || "Không xác định"}
+      </Text>
       <Button mode="contained-tonal" onPress={logout}>
         Đăng xuất
       </Button>

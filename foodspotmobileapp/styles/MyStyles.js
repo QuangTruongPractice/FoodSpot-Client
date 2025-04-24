@@ -28,7 +28,7 @@ const MyStyles = StyleSheet.create({
 
   cate: {
     flexDirection: "row",
-    height: 80,
+    height: 100,
   },
 
   searchBox: {
@@ -45,6 +45,7 @@ const MyStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     marginHorizontal: 4,
+    marginTop: -15,
     flexDirection: "row",
   },
 
@@ -59,6 +60,9 @@ const MyStyles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#eee",
     marginBottom: 5,
+    marginTop: -15,
+    width: "100%",
+    height: 120,
   },
 
   bannerImage: {
@@ -114,6 +118,16 @@ const MyStyles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
   },
+
+  productEmpty: {
+    textAlign: 'center', 
+    color: 'gray'
+  }, 
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 50
+  }
 
 });
 

@@ -1,4 +1,4 @@
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Text, Dimensions } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { Button, HelperText, TextInput } from "react-native-paper";
 import { useContext, useState } from "react";
@@ -8,19 +8,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MyDispatchContext } from "../../configs/MyContexts";
 
 const Login = () => {
-  const info = [
-    { label: "Tên đăng nhập", icon: "text", secureTextEntry: false, field: "username" },
-    { label: "Mật khẩu", icon: "eye", secureTextEntry: true, field: "password" },
-  ];
   const [user, setUser] = useState({ username: "", password: "" });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const nav = useNavigation();
   const dispatch = useContext(MyDispatchContext);
 
-  const setState = (value, field) => {
-    setUser({ ...user, [field]: value });
-  };
+  const setState = (value, field) => setUser({ ...user, [field]: value });
 
   const validate = () => {
     if (!user.username || !user.password) {
@@ -38,36 +32,29 @@ const Login = () => {
         const loginData = {
           username: user.username,
           password: user.password,
-          client_id: "ly6xF1VvDFftDXCFUZtr3ZNNzLqcTUzv1uz7wmVO",
+          client_id: "3bLZ1tgXrCBf7MRwKi9LLp2Bxeawwff3Pkd7OdpV",
           client_secret:
-            "tVdL3xRmmzbdc1DrI4IP4SqxQAjo1uAa7BJ64l00jB5R3wZg06VPyNNwrYMHlblZFAiCnakzFQc8Pbwdov5n7g5lhuoFxbPLkMDlSmS94CM5mpbbTYzCJsYhRK7RkBMV",
+            "r2i2lgO9PkEtMcUchhYBzNMwXVWAuZp8VVst6bZ3iNubliJNlMaN3plMuBZXeXASWuTc5SDGuaWj9VQORzUpFE8WAwCa9XAdIqrL1Yj9PhUNdgG99ZFokYAf8zQ9GEom",
           grant_type: "password",
         };
-        console.log("Dữ liệu gửi tới /o/token/:", loginData);
 
         let res = await Apis.post(endpoints["login"], loginData);
         const accessToken = res.data.access_token;
-        console.log("Access Token:", accessToken);
 
         await AsyncStorage.setItem("token", accessToken);
-        console.log("Token đã lưu vào AsyncStorage:", accessToken);
 
-        // Gọi API /users/current-user/
         let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
-        console.log("Thông tin người dùng:", userRes.data);
 
-        // Cập nhật MyUserContext
         dispatch({
           type: "login",
-          payload: userRes.data, // Lưu thông tin user
+          payload: userRes.data,
         });
 
-        nav.navigate("index");
+        nav.navigate("Home");
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
-          ex.response?.data?.detail ||
-            "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!"
+          ex.response?.data?.detail || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!"
         );
       } finally {
         setLoading(false);
@@ -75,33 +62,51 @@ const Login = () => {
     }
   };
 
+  const fields = [
+    { label: "Tên đăng nhập", icon: "account", secureTextEntry: false, field: "username" },
+    { label: "Mật khẩu", icon: "lock", secureTextEntry: true, field: "password" },
+  ];
+
+  const width = Dimensions.get("window").width * 0.9;
+
   return (
-    <View style={MyStyles.container}>
-      <ScrollView>
+    <View style={[MyStyles.container, { alignItems: "center" }]}>
+      <ScrollView contentContainerStyle={{ alignItems: "center", paddingVertical: 40 }}>
+        <Text style={{ fontSize: 32, fontWeight: "bold", marginBottom: 24 }}>FoodSpot</Text>
+
         <HelperText type="error" visible={!!msg}>
           {msg}
         </HelperText>
 
-        {info.map((i) => (
+        {fields.map((i) => (
           <TextInput
-            value={user[i.field]}
-            onChangeText={(t) => setState(t, i.field)}
-            style={MyStyles.margin}
             key={i.field}
             label={i.label}
+            value={user[i.field]}
+            onChangeText={(t) => setState(t, i.field)}
             secureTextEntry={i.secureTextEntry}
             right={<TextInput.Icon icon={i.icon} />}
+            style={{ width, marginVertical: 8 }}
           />
         ))}
 
         <Button
-          disabled={loading}
-          loading={loading}
-          onPress={login}
           mode="contained"
-          style={MyStyles.margin}
+          onPress={login}
+          loading={loading}
+          disabled={loading}
+          style={{ width, marginVertical: 12 }}
         >
           Đăng nhập
+        </Button>
+
+        <Button
+          mode="outlined"
+          onPress={() => nav.navigate("Register")}
+          style={{ width, borderColor: "#ccc", marginBottom: 20 }}
+          textColor="#000"
+        >
+          Đăng ký
         </Button>
       </ScrollView>
     </View>
