@@ -67,12 +67,8 @@ const Home = () => {
   ];
 
   const loadCates = async () => {
-    try {
-      let res = await Apis.get(endpoints["foods-category"]);
-      setCategories(res.data.results);
-    } catch (ex) {
-      console.error(ex);
-    }
+    let res = await Apis.get(endpoints["foods-category"]);
+    setCategories(res.data.results);
   };
 
   const loadFoods = async () => {
@@ -211,9 +207,10 @@ const Home = () => {
             <Icon name="account-multiple-outline" size={20} />
             <Text style={MyStyles.optionText}>Following</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={MyStyles.optionButton}>
-          <Icon name="map-marker-outline" size={20} /> 
-          <Text style={MyStyles.optionText}>Address</Text>
+          <TouchableOpacity style={MyStyles.optionButton}
+            onPress={() => nav.navigate("Address")}>
+            <Icon name="map-marker-outline" size={20} /> 
+            <Text style={MyStyles.optionText}>Address</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

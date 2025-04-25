@@ -8,12 +8,28 @@ export const endpoints = {
     'foods-category': '/foods-category/',
     'foods': '/foods/',
     'food-details': (foodId) => `/foods/${foodId}/`,
-    'restaurants':'/restaurants/',
-    'restaurant-details': (id) => `/restaurants/${id}/`,
-    'menus': '/menus/',
-    "register": "/users/register/",
     'login': '/o/token/',
     'current-user': '/users/current-user/',
+    //Menu
+    'menus': '/menus/',
+    'menus-details': (id) => `/menus/${id}/`,
+    //Restaurant
+    'restaurants':'/restaurants/',
+    'restaurant-details': (id) => `/restaurants/${id}/`,
+    'restaurant-menus': (id) => `/restaurants/${id}/menus/`,
+    'restaurant-foods': (id) => `/restaurants/${id}/foods/`,
+
+    // Users Address
+    "users-address_list": "/users-address/",
+    "users-address_read": (id) => `/users-address/${id}/`,
+
+    // Users
+    "users_list": "/users/",
+    "users_create": "/users/",
+    "users_current-user_read": "/users/current-user/",
+    "users_current-user_partial_update": "/users/current-user/",
+    "users_read": (id) => `/users/${id}/`,
+    "register": "/users/register/",
 }
 
 const api = axios.create({
