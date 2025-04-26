@@ -43,7 +43,7 @@ const Login = () => {
 
         await AsyncStorage.setItem("token", accessToken);
         let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
-        console.info(userRes)
+        await AsyncStorage.setItem("userId", userRes.data.id.toString());
 
         dispatch({
           type: "login",

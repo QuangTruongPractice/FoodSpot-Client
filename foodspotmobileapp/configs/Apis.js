@@ -5,11 +5,21 @@ const BASE_URL = 'https://tranquangtruong25.pythonanywhere.com/'
 
 export const endpoints = {
     'orders': '/orders/',
+
     'foods-category': '/foods-category/',
     'foods': '/foods/',
     'food-details': (foodId) => `/foods/${foodId}/`,
     'login': '/o/token/',
+    //favorite
+    'favorite': '/favorite/',
+    'favorite-details': (id) => `/favorite/${id}/`,
+    //follow
+    'follow': '/follow/',
+    'follow-details': (id) => `/follow/${id}/`,
+    //User
     'current-user': '/users/current-user/',
+    'current-user-follow': '/users/current-user/follow/',
+    'current-user-favorite': '/users/current-user/favorite/',
     //Menu
     'menus': '/menus/',
     'menus-details': (id) => `/menus/${id}/`,

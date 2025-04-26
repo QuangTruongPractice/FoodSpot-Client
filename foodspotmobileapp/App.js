@@ -14,6 +14,8 @@ import AddAddress from "./components/customer/AddAddress";
 import UpdateAddress from "./components/customer/UpdateAddress";
 import RestaurantDetails from "./components/customer/RestaurantDetails";
 import MenuDetails from "./components/customer/MenuDetails";
+import UserFollow from "./components/customer/UserFollow";
+import UserFavorite from "./components/customer/UserFavorite";
 import Profile from "./components/customer/Profile";
 import { Icon } from "react-native-paper";
 import { PaperProvider } from "react-native-paper";
@@ -26,32 +28,40 @@ const StackNavigator = () => {
     <Stack.Navigator>
       <Tab.Screen name="Home" component={Home} options={{ headerShown: false }}/>
       <Tab.Screen name="Food" component={Food}  options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false,
         }}/>
       <Tab.Screen name="Address" component={Address} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false,
         }}/>
       <Tab.Screen name="AddAddress" component={AddAddress} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false, 
         }}/>
       <Tab.Screen name="UpdateAddress" component={UpdateAddress} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false, 
         }}/>
       <Tab.Screen name="RestaurantDetails" component={RestaurantDetails} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false,  
         }}/>
       <Tab.Screen name="MenuDetails" component={MenuDetails} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,  
+          headerBackTitleVisible: false, 
+        }}/>
+      <Tab.Screen name="UserFollow" component={UserFollow} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
+      <Tab.Screen name="UserFavorite" component={UserFavorite} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
         }}/>
       <Tab.Screen name="Login" component={Login} options={{
-          headerShown: true,  // Hiển thị header cho màn hình Food
-          headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+          headerShown: true,
+          headerBackTitleVisible: false,
       }}/>
     </Stack.Navigator>
   );

@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import MyStyles from "../../styles/MyStyles";
-import Apis, { endpoints } from "../../configs/Apis";
+import Apis, { authApis,endpoints } from "../../configs/Apis";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const RestaurantDetails = ({ route }) => {
   const { restaurantId } = route.params;
@@ -19,11 +19,14 @@ const RestaurantDetails = ({ route }) => {
   const [restaurant, setRestaurant] = useState([]);
   const [activeTab, setActiveTab] = useState("Món ăn");
   const [loading, setLoading] = useState(true);
+  const [followStatus, setFollowStatus] = useState(null);
+  const [followId, setFollowId] = useState(null);
   const nav = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const menuRes = await Apis.get(endpoints["restaurant-menus"](restaurantId));
         setMenus(menuRes.data);
 
@@ -32,6 +35,25 @@ const RestaurantDetails = ({ route }) => {
 
         const res = await Apis.get(endpoints["restaurant-details"](restaurantId));
         setRestaurant(res.data);
+
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          nav.replace("Login");
+          return;
+        }
+        const followRes = await authApis(token).get(endpoints["current-user-follow"]);
+        if (followRes.data) {
+          // Nếu tìm thấy dữ liệu follow, kiểm tra status
+          const follow = followRes.data.find(
+            (item) => item.restaurant === restaurantId
+          );
+          if (follow) {
+            setFollowStatus(follow.status); // Lưu trạng thái FOLLOW hoặc CANCEL
+            setFollowId(follow.id);
+          }
+        } else {
+          setFollowStatus("NOT_FOLLOWED"); // Người dùng chưa follow nhà hàng này
+        }
       } catch (error) {
         console.error("Error loading restaurant data:", error);
       } finally {
@@ -41,6 +63,30 @@ const RestaurantDetails = ({ route }) => {
 
     fetchData();
   }, [restaurantId]);
+
+  const handleFollow = async () => {
+    const token = await AsyncStorage.getItem("token");
+    const userId = await AsyncStorage.getItem("userId");
+    if (followStatus === "FOLLOW") {
+      // Hủy follow
+      await authApis(token).patch(endpoints["follow-details"](followId), {
+        status: "CANCEL"
+      });
+        setFollowStatus("CANCEL");
+    } else if (followStatus === "CANCEL"){
+      await authApis(token).patch(endpoints["follow-details"](followId), {
+        status: "FOLLOW"
+      });
+      setFollowStatus("FOLLOW");
+    } else {
+      await authApis(token).post(endpoints["follow"], {
+        user: userId,
+        restaurant: restaurantId,
+        status: "FOLLOW",
+      });
+      setFollowStatus("FOLLOW");
+    }
+  };
 
 
   if (loading) return <ActivityIndicator size="large" style={{ marginTop: 20 }} />;
@@ -64,8 +110,13 @@ const RestaurantDetails = ({ route }) => {
             <TouchableOpacity style={styles.actionButton}>
                 <Text style={styles.actionButtonText}>Tin nhắn</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButtonColor}>
-                <Text style={styles.actionButtonTextColor}>Theo dõi</Text>
+            <TouchableOpacity
+              style={styles.actionButtonColor}
+              onPress={handleFollow}
+            >
+              <Text style={styles.actionButtonTextColor}>
+                {followStatus === "FOLLOW" ? "Hủy follow" : "Theo dõi"}
+              </Text>
             </TouchableOpacity>
             </View>
         </View>
@@ -157,120 +208,26 @@ const RestaurantDetails = ({ route }) => {
   );
 };
 
-  const styles = StyleSheet.create({
-    foodCard: {
-        width: "48%",
-        backgroundColor: "#f9f9f9",
-        borderRadius: 10,
-        marginBottom: 15,
-        overflow: "hidden",
-        elevation: 2,
-      },
-      
-      foodImage: {
-        width: "100%",
-        height: 100,
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
-      },
-      
-      foodName: {
-        fontSize: 14,
-        fontWeight: "bold",
-        marginTop: 6,
-        marginHorizontal: 8,
-      },
-      
-      foodPrice: {
-        fontSize: 13,
-        color: "#e53935",
-        fontWeight: "bold",
-        marginBottom: 8,
-        marginHorizontal: 8,
-      },
-      
-      menuItem: {
-        backgroundColor: "#f1f1f1",
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
-      },
-      
-      menuTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-      },
-      
-      menuDesc: {
-        fontSize: 13,
-        color: "#666",
-        marginTop: 4,
-      },
-      restaurantCard: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#f5f5f5",
-        padding: 10,
-        borderRadius: 10,
-        margin: 10,
-        elevation: 2,
-      },
-      restaurantAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-      },
-      restaurantName: {
-        fontSize: 16,
-        fontWeight: "bold",
-      },
-      ratingRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 4,
-      },
-      star: {
-        color: "#2ecc71",
-        marginRight: 4,
-      },
-      ratingText: {
-        color: "#2ecc71",
-        fontWeight: "bold",
-      },
-      actionsColumn: {
-        flexDirection: "column",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-      },
-      actionButton: {
-        backgroundColor: "#eee",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        marginBottom: 6,
-      },
-      actionButtonColor: {
-        backgroundColor: "#9c27b0",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        marginBottom: 6,
-      },
-      actionButtonText: {
-        fontWeight: "bold",
-        color: "#333",
-      },
-      actionButtonTextColor: {
-        fontWeight: "bold",
-        color: "white",
-      },
-      menuHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-      },
-      
-      
-  });
+const styles = StyleSheet.create({
+  foodCard: { width: "48%", backgroundColor: "#f9f9f9", borderRadius: 10, marginBottom: 15, overflow: "hidden", elevation: 2 },
+  foodImage: { width: "100%", height: 100, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  foodName: { fontSize: 14, fontWeight: "bold", marginTop: 6, marginHorizontal: 8 },
+  foodPrice: { fontSize: 13, color: "#e53935", fontWeight: "bold", marginBottom: 8, marginHorizontal: 8 },
+  menuItem: { backgroundColor: "#f1f1f1", borderRadius: 8, padding: 12, marginBottom: 12 },
+  menuTitle: { fontSize: 16, fontWeight: "bold" },
+  menuDesc: { fontSize: 13, color: "#666", marginTop: 4 },
+  restaurantCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f5f5f5", padding: 10, borderRadius: 10, margin: 10, elevation: 2 },
+  restaurantAvatar: { width: 50, height: 50, borderRadius: 25 },
+  restaurantName: { fontSize: 16, fontWeight: "bold" },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  star: { color: "#2ecc71", marginRight: 4 },
+  ratingText: { color: "#2ecc71", fontWeight: "bold" },
+  actionsColumn: { flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end" },
+  actionButton: { backgroundColor: "#eee", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
+  actionButtonColor: { backgroundColor: "#9c27b0", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
+  actionButtonText: { fontWeight: "bold", color: "#333" },
+  actionButtonTextColor: { fontWeight: "bold", color: "white" },
+  menuHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+});
 
 export default RestaurantDetails;

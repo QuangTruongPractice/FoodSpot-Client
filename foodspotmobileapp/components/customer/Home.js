@@ -195,18 +195,23 @@ const Home = () => {
             { justifyContent: "space-around"}
           ]}
         >
-          <TouchableOpacity style={MyStyles.optionButton}>
+          <TouchableOpacity style={MyStyles.optionButton}
+          onPress={() => nav.navigate("UserFavorite")}>
             <Icon name="heart-outline" size={20} />
             <Text style={MyStyles.optionText}>Favorites</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={MyStyles.optionButton}
+            onPress={() => nav.navigate("UserFollow")}>
+            <Icon name="account-multiple-outline" size={20} />
+            <Text style={MyStyles.optionText}>Following</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={MyStyles.optionButton}>
           <Icon name="cart-outline" size={20} />
           <Text style={MyStyles.optionText}>Orders</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={MyStyles.optionButton}>
-            <Icon name="account-multiple-outline" size={20} />
-            <Text style={MyStyles.optionText}>Following</Text>
-          </TouchableOpacity>
+          
           <TouchableOpacity style={MyStyles.optionButton}
             onPress={() => nav.navigate("Address")}>
             <Icon name="map-marker-outline" size={20} /> 
