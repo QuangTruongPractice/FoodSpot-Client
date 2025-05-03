@@ -4,12 +4,18 @@ import qs from "qs";
 const BASE_URL = 'https://tranquangtruong25.pythonanywhere.com/'
 
 export const endpoints = {
+    //order
     'orders': '/orders/',
+    'orders-details': (orderId) => `/orders/${orderId}/`,
+    'checkout': '/orders/checkout/',
 
+    //payment
+    'momo-payment': '/momo-payment/',
+    //food
     'foods-category': '/foods-category/',
     'foods': '/foods/',
     'food-details': (foodId) => `/foods/${foodId}/`,
-    'login': '/o/token/',
+    
     //favorite
     'favorite': '/favorite/',
     'favorite-details': (id) => `/favorite/${id}/`,
@@ -40,6 +46,17 @@ export const endpoints = {
     "users_current-user_partial_update": "/users/current-user/",
     "users_read": (id) => `/users/${id}/`,
     "register": "/users/register/",
+    'login': '/o/token/',
+
+    //Cart
+    'add-to-cart': '/add-to-cart/',
+    'my-cart': '/cart/my-cart/',
+    'delete-cart': cartId => `/cart/${cartId}/`,
+    'sub-carts': '/cart/sub-carts/',
+    'delete-multiple-sub-carts': '/sub-cart/delete-sub-carts/',
+    'delete-multiple-items': '/sub-cart-item/delete-multiple/',
+    'restaurant-sub-cart': '/sub-cart/restaurant-sub-cart/',
+    'update-sub-cart-item': '/update-sub-cart-item/',
 }
 
 const api = axios.create({

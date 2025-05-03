@@ -21,7 +21,33 @@ const RestaurantDetails = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState(null);
   const [followId, setFollowId] = useState(null);
+  const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
   const nav = useNavigation();
+
+  function getCurrentTimeServe() {
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour >= 5 && hour < 11) {
+        return 'MORNING';
+    } else if (hour >= 11 && hour < 17) {
+        return 'NOON';
+    } else if (hour >= 17 && hour < 23) {
+        return 'EVENING';
+    } else if (hour >= 23 || hour < 5) {
+        return 'NIGHT';
+    } else {
+        return null;
+    }
+  }
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+        setCurrentTimeServe(getCurrentTimeServe());
+    }, 300 * 1000);
+
+    return () => clearInterval(intervalId); // Clear interval khi rời trang
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -157,32 +183,53 @@ const RestaurantDetails = ({ route }) => {
       <View style={{ flex: 1, paddingHorizontal: 10, backgroundColor: "#fff" }}>
         {activeTab === "Món ăn" ? (
             <FlatList
-            key={"foods"} // buộc render lại khi tab đổi
+            key={"foods"} // Buộc render lại khi tab đổi
             data={foods}
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
-            renderItem={({ item }) => (
+            renderItem={({ item }) => {
+              // Lấy giá tại time_serve hiện tại
+              const currentTimeServe = getCurrentTimeServe(); // Hàm giả định để lấy thời gian hiện tại
+              const currentPriceObj = item.prices.find(
+                (p) => p.time_serve === currentTimeServe
+              );
+              const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
+        
+              // Nếu giá = 0 thì không hiển thị
+              if (currentPrice === 0) {
+                return null; // Không render gì nếu giá bằng 0
+              }
+        
+              return (
                 <TouchableOpacity
-                style={styles.foodCard}
-                onPress={() => nav.navigate("Food", { foodId: item.id })}
+                  style={styles.foodCard}
+                  onPress={() => nav.navigate("Food", { foodId: item.id })}
                 >
-                <Image
+                  <Image
                     source={{ uri: item.image || "https://picsum.photos/400" }}
                     style={styles.foodImage}
-                />
-                <Text style={styles.foodName} numberOfLines={1}>
+                  />
+                  <Text style={styles.foodName} numberOfLines={1}>
                     {item.name}
-                </Text>
-                <Text style={styles.foodPrice}>
-                    {item.prices?.length
-                    ? Math.min(...item.prices.map((p) => p.price)).toLocaleString() + "đ"
-                    : "Đang cập nhật"}
-                </Text>
+                  </Text>
+                  <Text style={styles.foodPrice}>
+                    {currentPrice > 0
+                      ? currentPrice.toLocaleString() + "đ"
+                      : "Đang cập nhật"}
+                  </Text>
                 </TouchableOpacity>
-            )}
+              );
+            }}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={{ paddingBottom: 20 }}
-            />
+            ListEmptyComponent={
+              <View style={{ alignItems: "center", marginTop: 20 }}>
+                <Text style={{ fontSize: 16, color: "#666" }}>
+                  Nhà hàng không hoạt động vào thời gian này
+                </Text>
+              </View>
+            }
+          />
         ) : (
             <FlatList
             key={"menus"}

@@ -4,6 +4,7 @@ import Apis, { authApis, endpoints } from "../../configs/Apis"; // Giả sử b�
 import { useNavigation } from "@react-navigation/native";
 import { IconButton } from "react-native-paper"; 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from 'react-native-toast-message';
 
 const Food = ({ route }) => {
   const { foodId } = route.params; // Lấy foodId từ route.params
@@ -14,6 +15,23 @@ const Food = ({ route }) => {
   const [favStatus, setFavStatus] = useState(null);
   const [favId, setFavId] = useState(null);
   const nav = useNavigation();
+
+  function getCurrentTimeServe() {
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour >= 5 && hour < 11) {
+        return 'MORNING';
+    } else if (hour >= 11 && hour < 13) {
+        return 'NOON';
+    } else if (hour >= 13 && hour < 23) {
+        return 'EVENING';
+    } else if (hour >= 23 || hour < 5) {
+        return 'NIGHT';
+    } else {
+        return null;
+    }
+  }
 
   const loadRestaurantDetails = async (restaurantId) => {
     const res = await Apis.get(endpoints["restaurant-details"](restaurantId));
@@ -47,17 +65,24 @@ const Food = ({ route }) => {
   const loadRelatedMenuFoods = async () => {
     const res = await Apis.get(endpoints["menus"]);
     const allMenus = res.data;
-  
+    const currentTimeServe = getCurrentTimeServe();
+    let relatedFoodsList = [];
     // Duyệt từng menu để tìm món ăn hiện tại
     for (let menu of allMenus) {
-      const found = menu.foods.find(f => f.id === foodId);
-      if (found) {
-        // Bỏ món hiện tại ra khỏi danh sách trước khi set
-        setCurrentFoodInMenu(found); // lưu lại món có giá chính xác
-        const otherFoods = menu.foods.filter(f => f.id !== foodId);
-        setRelatedFoods(otherFoods);
+      const food = menu.foods.find(f => f.id === foodId);
+      if (food) {
+        if (menu.time_serve === currentTimeServe) {
+          setCurrentFoodInMenu(food);
+          const otherFoods = menu.foods.filter(f => f.id !== foodId);
+          relatedFoodsList = [...relatedFoodsList, ...otherFoods];
+        }
         break;
       }
+    }
+    if (relatedFoodsList.length > 0) {
+      setRelatedFoods(relatedFoodsList);
+    } else {
+      setRelatedFoods([]);  // Làm sạch relatedFoods
     }
   };
 
@@ -99,6 +124,33 @@ const Food = ({ route }) => {
       setFavStatus("FAVORITE");
     }
   };
+
+  const addToCart = async() => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const currentTimeServe = getCurrentTimeServe();
+      await authApis(token).post(endpoints["add-to-cart"], {
+        food_id: foodId,
+        time_serve: currentTimeServe,
+      });
+      Toast.show({
+        type: "success",
+        text1: "Thành công",
+        text2: "Đã thêm vào giỏ hàng!",
+        position: "bottom",
+        visibilityTime: 2000, // 2 giây rồi tự tắt
+      });
+    } catch (error) {
+      console.error("Thêm vào giỏ lỗi:", error);
+      console.error("Thêm vào giỏ lỗi:", error);
+      Toast.show({
+        type: "error",
+        text1: "Lỗi",
+        text2: "Không thể thêm vào giỏ hàng!",
+        position: "bottom",
+      });
+    }
+  }
 
   if (!foodDetails) {
     return <ActivityIndicator size="large" />; // Hiển thị loading khi chưa có dữ liệu
@@ -142,7 +194,8 @@ const Food = ({ route }) => {
       
       {/* Nút thêm vào giỏ và đặt hàng */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.buttonAdd}>
+        <TouchableOpacity style={styles.buttonAdd}
+          onPress={addToCart}>
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonOrder}>
@@ -186,7 +239,7 @@ const Food = ({ route }) => {
           }
         >
           <Image
-            source={{ uri: food.image.replace("image/upload/", "") }}
+            source={{ uri: food.image }}
             style={styles.menuImage}
           />
           <View style={styles.menuInfo}>

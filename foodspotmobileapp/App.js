@@ -16,11 +16,15 @@ import RestaurantDetails from "./components/customer/RestaurantDetails";
 import MenuDetails from "./components/customer/MenuDetails";
 import UserFollow from "./components/customer/UserFollow";
 import UserFavorite from "./components/customer/UserFavorite";
+import Checkout from "./components/customer/Checkout";
+import Order from "./components/customer/Order";
+import OrderDetails from "./components/customer/OrderDetails";
 import Profile from "./components/customer/Profile";
 import { Icon } from "react-native-paper";
 import { PaperProvider } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
 import { useContext, useReducer } from "react";
+import Toast from 'react-native-toast-message';
 
 const Stack = createNativeStackNavigator();
 const StackNavigator = () => {
@@ -59,6 +63,22 @@ const StackNavigator = () => {
           headerShown: true, 
           headerBackTitleVisible: false,
         }}/>
+      <Tab.Screen name="Cart" component={Cart} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
+      <Tab.Screen name="Checkout" component={Checkout} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
+      <Tab.Screen name="Order" component={Order} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
+      <Tab.Screen name="OrderDetails" component={OrderDetails} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
       <Tab.Screen name="Login" component={Login} options={{
           headerShown: true,
           headerBackTitleVisible: false,
@@ -71,12 +91,28 @@ const AuthStack = createNativeStackNavigator();
 const AuthStackNavigator = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Login" component={Login} />
-    <AuthStack.Screen name="Register" component={Register}
-        options={{
+    <AuthStack.Screen name="Register" component={Register} options={{
+        headerShown: true,  // Hiển thị header cho màn hình Food
+        headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
+      }}/>
+  </AuthStack.Navigator>
+  
+);
+
+const CartStack = createNativeStackNavigator();
+const CartStackNavigator = () => (
+  <CartStack.Navigator screenOptions={{ headerShown: false }}>
+    <CartStack.Screen name="Cart" component={Cart} />
+    <CartStack.Screen name="Checkout" component={Checkout} options={{
           headerShown: true,  // Hiển thị header cho màn hình Food
           headerBackTitleVisible: false,  // Ẩn tên màn hình khi back
         }}/>
-  </AuthStack.Navigator>
+    <AuthStack.Screen name="Address" component={Address} options={{
+        headerShown: true,  
+        headerBackTitleVisible: false,
+      }}/>
+  </CartStack.Navigator>
+  
 );
 
 const Tab = createBottomTabNavigator();
@@ -89,7 +125,7 @@ const TabNavigator = () => {
       <Tab.Screen name="Auth" component={AuthStackNavigator} options={{ tabBarIcon: () => <Icon size={30} source="account-plus" /> }}/>
       ):(
       <>
-      <Tab.Screen name="Cart" component={Cart} options={{tabBarIcon: () => <Icon size={30} source="cart" />}}/>
+      <Tab.Screen name="Cart" component={CartStackNavigator} options={{tabBarIcon: () => <Icon size={30} source="cart" />}}/>
       <Tab.Screen name="Notifications" component={Notification} options={{ tabBarIcon: () => <Icon size={30} source="bell" /> }}/>
       <Tab.Screen name="Profile" component={Profile} options={{tabBarIcon: () => <Icon size={30} source="account"/> }}/>
       </>
@@ -108,6 +144,7 @@ const App = () => {
           <NavigationContainer>
             <TabNavigator />
             <StatusBar style="auto" /> {/* Thêm StatusBar nếu cần */}
+            <Toast />
           </NavigationContainer>
         </MyDispatchContext.Provider>
       </MyUserContext.Provider>

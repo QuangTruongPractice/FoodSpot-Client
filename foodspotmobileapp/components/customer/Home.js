@@ -30,8 +30,25 @@ const Home = () => {
   const [priceMin, setPriceMin] = useState(null);
   const [priceMax, setPriceMax] = useState(null);
   const nav = useNavigation();
-
   const [selectedRange, setSelectedRange] = useState(null);
+  const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
+
+  function getCurrentTimeServe() {
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour >= 5 && hour < 11) {
+        return 'MORNING';
+    } else if (hour >= 11 && hour < 13) {
+        return 'NOON';
+    } else if (hour >= 13 && hour < 23) {
+        return 'EVENING';
+    } else if (hour >= 23 || hour < 5) {
+        return 'NIGHT';
+    } else {
+        return null;
+    }
+  }
 
   const handleRangeChange = (value) => {
     setSelectedRange(value);
@@ -129,6 +146,14 @@ const Home = () => {
     return () => clearTimeout(timer);
   }, [page]);
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+        setCurrentTimeServe(getCurrentTimeServe());
+    }, 300 * 1000); // Mỗi 60 giây (1 phút) kiểm tra 1 lần
+
+    return () => clearInterval(intervalId); // Clear interval khi rời trang
+  }, []);
+
   const quickFilter = async (valueMin, valueMax) => {
     setPage(1);
     setFoods([]);
@@ -175,8 +200,8 @@ const Home = () => {
           <Icon name="cart-outline" size={28} color="#000" />
         </TouchableOpacity>
       </View>
-
-      <View> {/* Giới hạn chiều rộng của dropdown */}
+       {/* Giới hạn chiều rộng của dropdown */}
+      <View>
         <RNPickerSelect
           onValueChange={handleRangeChange}
           placeholder={{ label: "Chọn khoảng giá", value: null }}
@@ -207,7 +232,8 @@ const Home = () => {
             <Text style={MyStyles.optionText}>Following</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={MyStyles.optionButton}>
+          <TouchableOpacity style={MyStyles.optionButton}
+            onPress={() => nav.navigate("Order")}>
           <Icon name="cart-outline" size={20} />
           <Text style={MyStyles.optionText}>Orders</Text>
           </TouchableOpacity>
@@ -267,17 +293,25 @@ const Home = () => {
         <ActivityIndicator size="large" />
       ) : (
         <FlatList
-          data={foods}
+          data={foods.filter(item => {
+            const currentPriceObj = item.prices.find(
+              (p) => p.time_serve === currentTimeServe
+            );
+            const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
+
+            // Kiểm tra nếu price bằng 0 thì không hiển thị sản phẩm
+            return currentPrice > 0;
+          })}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: "space-between" }}
           renderItem={({ item }) => {
             const defaultImage = "https://picsum.photos/400/200";
             const imageUri = item.image || defaultImage;
-            const minPrice =
-              item.prices?.length > 0
-                ? Math.min(...item.prices.map((p) => p.price))
-                : 0;
+            const currentPriceObj = item.prices.find(
+                (p) => p.time_serve === currentTimeServe
+            );
+            const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
 
             return (
               <View style={MyStyles.productCardGrid}>
@@ -293,7 +327,7 @@ const Home = () => {
                     Nhà hàng: {item.restaurant_name}
                   </Text>
                   <Text style={MyStyles.productPrice}>
-                    {minPrice.toLocaleString("vi-VN")}₫
+                    {currentPrice.toLocaleString("vi-VN")}₫
                   </Text>
                 </TouchableOpacity>
               </View>
