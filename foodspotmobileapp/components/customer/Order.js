@@ -1,5 +1,4 @@
 import { Text, View, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
-import MyStyles from "../../styles/MyStyles";
 import { useState, useEffect } from "react";
 import { authApis, endpoints } from '../../configs/Apis';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -42,7 +41,7 @@ const Order = () => {
                 orders.map((order) => (
                     <TouchableOpacity
                         key={order.id}
-                        onPress={() => nav.navigate("OrderDetails", {orderId: order.id})}
+                        onPress={() => nav.navigate("OrderInfo", {orderId: order.id})}
                         style={{
                             backgroundColor: "#f9f9f9",
                             padding: 15,

@@ -18,6 +18,7 @@ import UserFollow from "./components/customer/UserFollow";
 import UserFavorite from "./components/customer/UserFavorite";
 import Checkout from "./components/customer/Checkout";
 import Order from "./components/customer/Order";
+import OrderInfo from "./components/customer/OrderInfo";
 import OrderDetails from "./components/customer/OrderDetails";
 import Profile from "./components/customer/Profile";
 import { Icon } from "react-native-paper";
@@ -76,6 +77,10 @@ const StackNavigator = () => {
           headerBackTitleVisible: false,
         }}/>
       <Tab.Screen name="OrderDetails" component={OrderDetails} options={{
+          headerShown: true, 
+          headerBackTitleVisible: false,
+        }}/>
+      <Tab.Screen name="OrderInfo" component={OrderInfo} options={{
           headerShown: true, 
           headerBackTitleVisible: false,
         }}/>
@@ -143,7 +148,7 @@ const App = () => {
         <MyDispatchContext.Provider value={dispatch}>
           <NavigationContainer>
             <TabNavigator />
-            <StatusBar style="auto" /> {/* Thêm StatusBar nếu cần */}
+            <StatusBar style="auto" /> 
             <Toast />
           </NavigationContainer>
         </MyDispatchContext.Provider>

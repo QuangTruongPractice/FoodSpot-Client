@@ -1,28 +1,31 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, Modal, Alert, TouchableOpacity, FlatList, Image, ActivityIndicator, StyleSheet, TextInput } from "react-native";
 import Apis, { authApis,endpoints } from "../../configs/Apis";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Icon, Button } from "react-native-paper";
 
 const RestaurantDetails = ({ route }) => {
   const { restaurantId } = route.params;
   const [menus, setMenus] = useState([]);
   const [foods, setFoods] = useState([]);
   const [restaurant, setRestaurant] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [activeTab, setActiveTab] = useState("Món ăn");
   const [loading, setLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState(null);
   const [followId, setFollowId] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [comment, setComment] = useState("");
+  const [star, setStar] = useState(0);
+  const [userId, setUserId] = useState(null);
+  const [canReview, setCanReview] = useState(false);
   const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
   const nav = useNavigation();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [editedComment, setEditedComment] = useState("");
 
   function getCurrentTimeServe() {
     const now = new Date();
@@ -49,50 +52,93 @@ const RestaurantDetails = ({ route }) => {
     return () => clearInterval(intervalId); // Clear interval khi rời trang
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const menuRes = await Apis.get(endpoints["restaurant-menus"](restaurantId));
-        setMenus(menuRes.data);
+  const loadReviews = async () => {
+    const reviewsRes = await Apis.get(endpoints["restaurant-reviews"](restaurantId));
+    setReviews(reviewsRes.data);
+  }
 
-        const foodRes = await Apis.get(endpoints["restaurant-foods"](restaurantId));
-        setFoods(foodRes.data);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const menuRes = await Apis.get(endpoints["restaurant-menus"](restaurantId));
+      setMenus(menuRes.data);
 
-        const res = await Apis.get(endpoints["restaurant-details"](restaurantId));
-        setRestaurant(res.data);
+      const foodRes = await Apis.get(endpoints["restaurant-foods"](restaurantId));
+      setFoods(foodRes.data);
 
-        const token = await AsyncStorage.getItem("token");
-        if (!token) {
-          nav.replace("Login");
-          return;
+      const restaurantRes = await Apis.get(endpoints["restaurant-details"](restaurantId));
+      setRestaurant(restaurantRes.data);
+
+      const id = await AsyncStorage.getItem("userId");
+      setUserId(id)
+    } catch (error) {
+      console.error("Error loading restaurant data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAuthData = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      const userRes = await authApis(token).get(endpoints["users_current-user_read"]);
+      setCurrentUser(userRes.data);
+  
+      const followRes = await authApis(token).get(endpoints["current-user-follow"]);
+      if (followRes.data) {
+        const follow = followRes.data.find((item) => item.restaurant === restaurantId);
+        if (follow) {
+          setFollowStatus(follow.status);
+          setFollowId(follow.id);
         }
-        const followRes = await authApis(token).get(endpoints["current-user-follow"]);
-        if (followRes.data) {
-          // Nếu tìm thấy dữ liệu follow, kiểm tra status
-          const follow = followRes.data.find(
-            (item) => item.restaurant === restaurantId
-          );
-          if (follow) {
-            setFollowStatus(follow.status); // Lưu trạng thái FOLLOW hoặc CANCEL
-            setFollowId(follow.id);
-          }
-        } else {
-          setFollowStatus("NOT_FOLLOWED"); // Người dùng chưa follow nhà hàng này
-        }
-      } catch (error) {
-        console.error("Error loading restaurant data:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        setFollowStatus("NOT_FOLLOWED");
       }
-    };
+    } catch (error) {
+      console.error("Error fetching auth data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, [restaurantId]);
+  useFocusEffect(
+    useCallback(() => {
+      const checkTokenAndLoadAuth= async () => {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          setToken(token)
+          fetchAuthData();
+          hasUserOrderedAtRestaurant();
+        }else {
+          setToken(null)
+        }
+      };
+      fetchData();
+      loadReviews();
+      checkTokenAndLoadAuth();
+    }, [restaurantId])
+  );
 
+  const hasUserOrderedAtRestaurant = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const ordersRes = await authApis(token).get(endpoints["orders"]);
+      const userOrders = ordersRes.data;
+      console.info(userOrders)
+      const hasOrder = userOrders.some((order) => order.restaurant == restaurantId);
+      console.info(hasOrder)
+      if(hasOrder)
+        setCanReview(true)
+      
+    } catch (error) {
+      console.error("Error checking user orders:", error);
+      return false;
+    }
+  };
+  
   const handleFollow = async () => {
     const token = await AsyncStorage.getItem("token");
-    const userId = await AsyncStorage.getItem("userId");
     if (followStatus === "FOLLOW") {
       // Hủy follow
       await authApis(token).patch(endpoints["follow-details"](followId), {
@@ -114,6 +160,40 @@ const RestaurantDetails = ({ route }) => {
     }
   };
 
+  const handleSubmit = async () => {
+    if (!comment || star === 0) {
+      alert("Vui lòng nhập đánh giá và chọn số sao.");
+      return;
+    }
+    const token = await AsyncStorage.getItem("token");
+    const res = await authApis(token).post(endpoints["reviews-restaurant"], {
+      comment: comment,
+      star: star,
+      restaurant: restaurantId,
+      user: parseInt(userId)
+    });
+    // Thêm đánh giá mới vào đầu danh sách
+    setReviews([res.data, ...reviews]);
+    setComment("");
+    setStar(0);
+  };
+
+  const handleDelete = async (reviewId) => {
+    const token = await AsyncStorage.getItem("token");
+    await authApis(token).delete(endpoints["reviews-restaurant-detail"](reviewId));
+    console.log("Đang xóa đánh giá", reviewId);
+    await loadReviews();
+  };
+  
+  const handleEdit = async (reviewId, editedComment) => {
+    const token = await AsyncStorage.getItem("token");
+    await authApis(token).patch(endpoints["reviews-restaurant-detail"](reviewId), {
+      comment: editedComment
+    });
+    console.log("Cập nhật đánh giá", reviewId, editedComment);
+    setModalVisible(false);
+    await loadReviews();
+  };
 
   if (loading) return <ActivityIndicator size="large" style={{ marginTop: 20 }} />;
 
@@ -158,48 +238,41 @@ const RestaurantDetails = ({ route }) => {
         }}
       >
         <TouchableOpacity onPress={() => setActiveTab("Món ăn")}>
-          <Text
-            style={{
-              fontWeight: activeTab === "Món ăn" ? "bold" : "normal",
-              color: activeTab === "Món ăn" ? "#e53935" : "#000",
-            }}
-          >
-            Món ăn
-          </Text>
+          <Text style={{
+            fontWeight: activeTab === "Món ăn" ? "bold" : "normal",
+            color: activeTab === "Món ăn" ? "#e53935" : "#000",
+          }}>Món ăn</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setActiveTab("Menu")}>
-          <Text
-            style={{
-              fontWeight: activeTab === "Menu" ? "bold" : "normal",
-              color: activeTab === "Menu" ? "#e53935" : "#000",
-            }}
-          >
-            Menu
-          </Text>
+          <Text style={{
+            fontWeight: activeTab === "Menu" ? "bold" : "normal",
+            color: activeTab === "Menu" ? "#e53935" : "#000",
+          }}>Menu</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveTab("Đánh giá")}>
+          <Text style={{
+            fontWeight: activeTab === "Đánh giá" ? "bold" : "normal",
+            color: activeTab === "Đánh giá" ? "#e53935" : "#000",
+          }}>Đánh giá</Text>
         </TouchableOpacity>
       </View>
 
       {/* Tab content */}
       <View style={{ flex: 1, paddingHorizontal: 10, backgroundColor: "#fff" }}>
         {activeTab === "Món ăn" ? (
-            <FlatList
-            key={"foods"} // Buộc render lại khi tab đổi
+          <FlatList
+            key={"foods"}
             data={foods}
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
             renderItem={({ item }) => {
-              // Lấy giá tại time_serve hiện tại
-              const currentTimeServe = getCurrentTimeServe(); // Hàm giả định để lấy thời gian hiện tại
               const currentPriceObj = item.prices.find(
                 (p) => p.time_serve === currentTimeServe
               );
               const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
-        
-              // Nếu giá = 0 thì không hiển thị
-              if (currentPrice === 0) {
-                return null; // Không render gì nếu giá bằng 0
-              }
-        
+
+              if (currentPrice === 0) return null;
+
               return (
                 <TouchableOpacity
                   style={styles.foodCard}
@@ -213,9 +286,7 @@ const RestaurantDetails = ({ route }) => {
                     {item.name}
                   </Text>
                   <Text style={styles.foodPrice}>
-                    {currentPrice > 0
-                      ? currentPrice.toLocaleString() + "đ"
-                      : "Đang cập nhật"}
+                    {currentPrice.toLocaleString()}đ
                   </Text>
                 </TouchableOpacity>
               );
@@ -230,26 +301,153 @@ const RestaurantDetails = ({ route }) => {
               </View>
             }
           />
-        ) : (
-            <FlatList
+        ) : activeTab === "Menu" ? (
+          <FlatList
             key={"menus"}
             data={menus}
             renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => nav.navigate("MenuDetails", { menuId: item.id })}
-                >
-                  <View style={styles.menuHeader}>
-                    <Text style={styles.menuTitle}>{item.name}</Text>
-                    <Text style={styles.menuCount}>{item.foods?.length || 0} </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => nav.navigate("MenuDetails", { menuId: item.id })}
+              >
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuTitle}>{item.name}</Text>
+                  <Text style={styles.menuCount}>{item.foods?.length || 0} món</Text>
+                </View>
+              </TouchableOpacity>
+            )}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={{ paddingBottom: 20 }}
-            />
+          />
+        ) : (
+          <>
+          { token && canReview && (
+            <View style={styles.container}>
+              <Image
+                source={{
+                  uri: currentUser.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                }}
+                style={styles.reviewsAvatar}
+              />
+
+              <View style={styles.middleContent}>
+                <Text style={styles.username}>{currentUser.username}</Text>
+
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <TouchableOpacity key={i} onPress={() => setStar(i)}>
+                      <Text style={[styles.star, { color: i <= star ? "#FFD700" : "#CCC" }]}>★</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={styles.commentRow}>
+                  <TextInput
+                    placeholder="Nhận xét..."
+                    value={comment}
+                    onChangeText={setComment}
+                    style={styles.textInput}
+                    multiline
+                  />
+                  <TouchableOpacity onPress={() => handleSubmit()} style={styles.sendButton}>
+                    <Icon source="send" size={22} color="#e53935" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+          <FlatList
+            key={"reviews"}
+            data={reviews}
+            renderItem={({ item }) => (
+              <View style={styles.reviewsContainer}>
+                <Image
+                  source={{
+                    uri:
+                      item.avatar ||
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  }}
+                  style={styles.reviewsAvatar}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "bold" }}>
+                    {item.user_name}
+                  </Text>
+                  <Text>{item.comment}</Text>
+                  <Text style={styles.star}>
+                    ⭐ {item.star} / 5
+                  </Text>
+                </View>
+
+                {currentUser && item.user === currentUser.id && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      Alert.alert("Tùy chọn", null, [
+                        {
+                          text: "Chỉnh sửa",
+                          onPress: () => {
+                            setEditingReview(item);
+                            setEditedComment(item.comment);
+                            setModalVisible(true);
+                          },
+                        },
+                        {
+                          text: "Xóa",
+                          style: "destructive",
+                          onPress: () => handleDelete(item.id),
+                        },
+                        { text: "Hủy", style: "cancel" },
+                      ])
+                    }
+                  >
+                    <Icon source="dots-vertical" size={20} color="gray" />
+                  </TouchableOpacity>
+                  )}
+              </View>
+            )}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={
+              <Text style={{ textAlign: "center", marginTop: 20 }}>
+                Chưa có đánh giá nào
+              </Text>
+            }
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+          <Modal visible={modalVisible} animationType="slide" transparent>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Chỉnh sửa đánh giá</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editedComment}
+                  onChangeText={setEditedComment}
+                  placeholder="Nhập bình luận mới"
+                  multiline
+                />
+                <View style={styles.modalButtons}>
+                  <Button
+                    mode="contained"
+                    onPress={() => {
+                      handleEdit(editingReview.id, editedComment);
+                      setModalVisible(false);
+                    }}
+                  >
+                    Lưu
+                  </Button>
+                  <Button
+                    mode="text"
+                    onPress={() => setModalVisible(false)}
+                    style={{ marginLeft: 10 }}
+                  >
+                    Hủy
+                  </Button>
+                </View>
+              </View>
+            </View>
+          </Modal>
+          </>
         )}
-        </View>
+      </View>
 
     </View>
   );
@@ -275,6 +473,43 @@ const styles = StyleSheet.create({
   actionButtonText: { fontWeight: "bold", color: "#333" },
   actionButtonTextColor: { fontWeight: "bold", color: "white" },
   menuHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  reviewsContainer: { flexDirection: "row", backgroundColor: "#f0f0f0", borderRadius: 8, padding: 10, marginBottom: 10, alignItems: "flex-start",},
+  reviewsAvatar: {width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: "#ccc", },
+  container: { flexDirection: "row", alignItems: "flex-start", padding: 8, borderTopWidth: 1, borderTopColor: "#eee", backgroundColor: "#fff" },
+  middleContent: { flex: 1 },
+  username: { fontWeight: "bold", fontSize: 14, marginBottom: 2 },
+  starsRow: { flexDirection: "row", marginBottom: 4 },
+  commentRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f1f1", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  textInput: { flex: 1, fontSize: 14, maxHeight: 60, padding: 0 },
+  sendButton: { paddingLeft: 6 },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 20,
+  },
+  modalTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 20,
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
 });
 
 export default RestaurantDetails;

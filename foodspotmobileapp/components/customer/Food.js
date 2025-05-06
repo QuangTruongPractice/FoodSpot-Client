@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, Image, TouchableOpacity, View, StyleSheet, Button } from "react-native";
-import Apis, { authApis, endpoints } from "../../configs/Apis"; // Giả sử bạn có API endpoint đã cấu hình
-import { useNavigation } from "@react-navigation/native";
+import React, { useEffect, useState, useCallback } from "react";
+import { ActivityIndicator, ScrollView, Text, Image, TouchableOpacity, View, StyleSheet } from "react-native";
+import Apis, { authApis, endpoints } from "../../configs/Apis";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { IconButton } from "react-native-paper"; 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from 'react-native-toast-message';
@@ -14,6 +14,8 @@ const Food = ({ route }) => {
   const [currentFoodInMenu, setCurrentFoodInMenu] = useState(null);
   const [favStatus, setFavStatus] = useState(null);
   const [favId, setFavId] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [activeTab, setActiveTab] = useState("Các món khác");
   const nav = useNavigation();
 
   function getCurrentTimeServe() {
@@ -42,6 +44,15 @@ const Food = ({ route }) => {
   const loadFoodDetails = async () => {
     const res = await Apis.get(endpoints["food-details"](foodId));
     setFoodDetails(res.data);
+  };
+
+  const loadReviews = async () => {
+    const reviewsRes = await Apis.get(endpoints["food-reviews"](foodId));
+    setReviews(reviewsRes.data);
+    console.info(reviewsRes.data);
+  }
+
+  const loadFavorite = async () => {
     const token = await AsyncStorage.getItem("token");
     if (!token) {
       nav.replace("Login");
@@ -86,9 +97,19 @@ const Food = ({ route }) => {
     }
   };
 
-  useEffect(() => {
-    loadFoodDetails();
-  }, [foodId]);
+  useFocusEffect(
+    useCallback(() => {
+      const checkTokenAndLoadFavorite = async () => {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          loadFavorite();
+        }
+      };
+      loadFoodDetails();
+      loadReviews();
+      checkTokenAndLoadFavorite();
+    }, [foodId])
+  );
 
   useEffect(() => {
     let timer = setTimeout(() => {
@@ -198,12 +219,12 @@ const Food = ({ route }) => {
           onPress={addToCart}>
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonOrder}>
-          <Text style={styles.buttonText}>Đặt hàng</Text>
-        </TouchableOpacity>
       </View>
 
       {restaurant && (
+        <TouchableOpacity 
+          onPress={() => nav.navigate("RestaurantDetails", { restaurantId: restaurant.id })} // Chuyển đến RestaurantDetails với restaurantId
+        >
         <View style={styles.restaurantCard}>
           <Image
             source={{
@@ -225,33 +246,77 @@ const Food = ({ route }) => {
             <Text style={styles.accessButtonText}>Truy cập</Text>
           </TouchableOpacity>
         </View>
+        </TouchableOpacity>
       )}
 
-      {/* Menu nhà hàng */}
-      <Text style={styles.menuHeader}>Các món khác</Text>
-      <View style={styles.menuContainer}>
-      {relatedFoods.map((food) => (
-        <TouchableOpacity
-          key={food.id}
-          style={styles.menuItem}
-          onPress={() =>
-            nav.push("Food", { foodId: food.id }) // mở food khác
-          }
-        >
-          <Image
-            source={{ uri: food.image }}
-            style={styles.menuImage}
-          />
-          <View style={styles.menuInfo}>
-            <Text style={styles.menuName}>{food.name}</Text>
-            <Text style={styles.menuDesc}>{food.description}</Text>
-          </View>
-          <Text style={styles.price}>
-            {food.price.toLocaleString()}đ
-          </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-around",
+          paddingVertical: 10,
+          backgroundColor: "#fafafa",
+        }}
+      >
+        <TouchableOpacity onPress={() => setActiveTab("Các món khác")}>
+          <Text style={{
+            fontWeight: activeTab === "Món ăn" ? "bold" : "normal",
+            color: activeTab === "Món ăn" ? "#e53935" : "#000",
+          }}>Món ăn</Text>
         </TouchableOpacity>
-      ))}
-    </View>
+        <TouchableOpacity onPress={() => setActiveTab("Đánh giá")}>
+          <Text style={{
+            fontWeight: activeTab === "Đánh giá" ? "bold" : "normal",
+            color: activeTab === "Đánh giá" ? "#e53935" : "#000",
+          }}>Đánh giá</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Menu nhà hàng */}
+      {activeTab === "Các món khác" ? (
+        <View style={styles.menuContainer}>
+          {relatedFoods.map((food) => (
+            <TouchableOpacity
+              key={food.id}
+              style={styles.menuItem}
+              onPress={() => nav.push("Food", { foodId: food.id })}
+            >
+              <Image source={{ uri: food.image }} style={styles.menuImage} />
+              <View style={styles.menuInfo}>
+                <Text style={styles.menuName}>{food.name}</Text>
+                <Text style={styles.menuDesc}>{food.description}</Text>
+              </View>
+              <Text style={styles.price}>
+                {food.price.toLocaleString()}đ
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        {reviews.length === 0 ? (
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            Chưa có đánh giá nào
+          </Text>
+        ) : (
+          reviews.map((item) => (
+            <View key={item.id} style={styles.reviewsContainer}>
+              <Image
+                source={{
+                  uri: item.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                }}
+                style={styles.reviewsAvatar}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "bold" }}>{item.user_name}</Text>
+                <Text>{item.comment}</Text>
+                <Text style={styles.star}>⭐ {item.star} / 5</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+      )}
+
     </ScrollView>
   );
 };
@@ -286,6 +351,8 @@ const styles = StyleSheet.create({
   price:                  { fontWeight:"bold", color:"#f00" },
   rowBetween:             { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 4 },
   ratingRow:              { flexDirection: 'row', alignItems: 'center', marginBottom: 5, },
+  reviewsContainer:       { flexDirection: "row", backgroundColor: "#f0f0f0", borderRadius: 8, padding: 10, marginBottom: 10, alignItems: "flex-start",},
+  reviewsAvatar:          {width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: "#ccc", },
 });
 
 export default Food;

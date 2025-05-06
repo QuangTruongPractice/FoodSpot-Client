@@ -96,8 +96,7 @@ const Login = () => {
           loading={loading}
           disabled={loading}
           style={{ width, marginVertical: 12 }}
-        >
-          Đăng nhập
+        > Đăng nhập
         </Button>
 
         <Button
@@ -105,8 +104,7 @@ const Login = () => {
           onPress={() => nav.navigate("Register")}
           style={{ width, borderColor: "#ccc", marginBottom: 20 }}
           textColor="#000"
-        >
-          Đăng ký
+        > Đăng ký
         </Button>
       </ScrollView>
     </View>

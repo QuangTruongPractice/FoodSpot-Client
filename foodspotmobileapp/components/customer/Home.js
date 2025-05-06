@@ -1,13 +1,4 @@
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Text,
-  TouchableOpacity,
-  View,
-  ScrollView,
-  StyleSheet
-} from "react-native";
+import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View, ScrollView, StyleSheet } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { useEffect, useState } from "react";
 import { Chip, Searchbar } from "react-native-paper";
@@ -149,7 +140,7 @@ const Home = () => {
   useEffect(() => {
     const intervalId = setInterval(() => {
         setCurrentTimeServe(getCurrentTimeServe());
-    }, 300 * 1000); // Mỗi 60 giây (1 phút) kiểm tra 1 lần
+    }, 300 * 1000);
 
     return () => clearInterval(intervalId); // Clear interval khi rời trang
   }, []);
@@ -157,8 +148,8 @@ const Home = () => {
   const quickFilter = async (valueMin, valueMax) => {
     setPage(1);
     setFoods([]);
-    setPriceMin(valueMin); // Cập nhật giá trị min
-    setPriceMax(valueMax); // Cập nhật giá trị max
+    setPriceMin(valueMin);
+    setPriceMax(valueMax);
   };
 
   const search = (value, callback) => {
@@ -183,43 +174,12 @@ const Home = () => {
     },
   });
 
-  return (
-    <SafeAreaView style={[MyStyles.container, MyStyles.p]}>
-      {/* Search */}
-      <View style={[MyStyles.row, MyStyles.searchBox]}>
-        <Searchbar
-          placeholder="Search for foods..."
-          onChangeText={(t) => search(t, setQ)}
-          value={q}
-          style={{ flex: 1 }}
-        />
-        <TouchableOpacity
-          style={{ marginLeft: 10 }}
-          onPress={() => nav.navigate(Cart)}
-        >
-          <Icon name="cart-outline" size={28} color="#000" />
-        </TouchableOpacity>
-      </View>
-       {/* Giới hạn chiều rộng của dropdown */}
-      <View>
-        <RNPickerSelect
-          onValueChange={handleRangeChange}
-          placeholder={{ label: "Chọn khoảng giá", value: null }}
-          items={priceRangeOptions}
-          value={selectedRange}
-          style={pickerSelectStyles}
-          useNativeAndroidPickerStyle={false}
-        />
-      </View>
-
+  const renderHeader = () => (
+    <View>
       {/* Options */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 150 }}>
-        <View
-          style={[
-            MyStyles.row,
-            { justifyContent: "space-around"}
-          ]}
-        >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 60 }}>
+        <View style={[MyStyles.row, { justifyContent: "space-around" }]}>
+          {/* Các nút option */}
           <TouchableOpacity style={MyStyles.optionButton}
           onPress={() => nav.navigate("UserFavorite")}>
             <Icon name="heart-outline" size={20} />
@@ -245,61 +205,66 @@ const Home = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
+  
       {/* Banner */}
       <View style={MyStyles.banner}>
-        <Swiper
-          autoplay
-          autoplayTimeout={5}
-          showsPagination
-          dotColor="#ccc"
-          activeDotColor="#ff6347"
-          loop
-        >
+        <Swiper autoplay autoplayTimeout={5} showsPagination dotColor="#ccc" activeDotColor="#ff6347" loop>
           {foodBanners.map((item, index) => (
-            <Image
-              key={index}
-              source={{ uri: item.uri }}
-              style={MyStyles.bannerImage}
-              resizeMode="cover"
-            />
+            <Image key={index} source={{ uri: item.uri }} style={MyStyles.bannerImage} resizeMode="cover" />
           ))}
         </Swiper>
       </View>
-
+  
       {/* Categories */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={MyStyles.cate}>
           <TouchableOpacity onPress={() => search(null, setCateId)}>
-            <Chip style={MyStyles.m} icon="label">
-              All Result
-            </Chip>
+            <Chip style={MyStyles.m} icon="label">All Result</Chip>
           </TouchableOpacity>
           {categories.map((c) => (
-            <TouchableOpacity
-              key={`Cate${c.id}`}
-              onPress={() => search(c.id, setCateId)}
-            >
-              <Chip style={MyStyles.m} icon="label">
-                {c.name}
-              </Chip>
+            <TouchableOpacity key={`Cate${c.id}`} onPress={() => search(c.id, setCateId)}>
+              <Chip style={MyStyles.m} icon="label">{c.name}</Chip>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
+    </View>
+  );
+  
 
-      {/* Product list */}
+  return (
+    <SafeAreaView style={[MyStyles.container, MyStyles.p]}>
+      {/* Search */}
+      <View style={[MyStyles.row, MyStyles.searchBox]}>
+        <Searchbar
+          placeholder="Search for foods..."
+          onChangeText={(t) => search(t, setQ)}
+          value={q}
+          style={{ flex: 1 }}
+        />
+        <TouchableOpacity style={{ marginLeft: 10 }} onPress={() => nav.navigate(Cart)}>
+          <Icon name="cart-outline" size={28} color="#000" />
+        </TouchableOpacity>
+      </View>
+  
+      {/* Dropdown */}
+      <View>
+        <RNPickerSelect
+          onValueChange={handleRangeChange}
+          placeholder={{ label: "Chọn khoảng giá", value: null }}
+          items={priceRangeOptions}
+          value={selectedRange}
+          style={pickerSelectStyles}
+          useNativeAndroidPickerStyle={false}
+        />
+      </View>
       {loading ? (
         <ActivityIndicator size="large" />
       ) : (
         <FlatList
           data={foods.filter(item => {
-            const currentPriceObj = item.prices.find(
-              (p) => p.time_serve === currentTimeServe
-            );
+            const currentPriceObj = item.prices.find(p => p.time_serve === currentTimeServe);
             const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
-
-            // Kiểm tra nếu price bằng 0 thì không hiển thị sản phẩm
             return currentPrice > 0;
           })}
           keyExtractor={(item) => item.id.toString()}
@@ -308,38 +273,23 @@ const Home = () => {
           renderItem={({ item }) => {
             const defaultImage = "https://picsum.photos/400/200";
             const imageUri = item.image || defaultImage;
-            const currentPriceObj = item.prices.find(
-                (p) => p.time_serve === currentTimeServe
-            );
+            const currentPriceObj = item.prices.find(p => p.time_serve === currentTimeServe);
             const currentPrice = currentPriceObj ? currentPriceObj.price : 0;
-
             return (
               <View style={MyStyles.productCardGrid}>
-                <TouchableOpacity
-                  onPress={() => nav.navigate('Food', { foodId: item.id })}
-                >
-                  <Image
-                    source={{ uri: imageUri }}
-                    style={MyStyles.productImage}
-                  />
+                <TouchableOpacity onPress={() => nav.navigate('Food', { foodId: item.id })}>
+                  <Image source={{ uri: imageUri }} style={MyStyles.productImage} />
                   <Text style={MyStyles.productName}>{item.name}</Text>
-                  <Text style={MyStyles.productBrand}>
-                    Nhà hàng: {item.restaurant_name}
-                  </Text>
-                  <Text style={MyStyles.productPrice}>
-                    {currentPrice.toLocaleString("vi-VN")}₫
-                  </Text>
+                  <Text style={MyStyles.productBrand}>Nhà hàng: {item.restaurant_name}</Text>
+                  <Text style={MyStyles.productPrice}>{currentPrice.toLocaleString("vi-VN")}₫</Text>
                 </TouchableOpacity>
               </View>
             );
           }}
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator size={30} /> : null
-          }
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={loadingMore ? <ActivityIndicator size={30} /> : null}
           ListEmptyComponent={() => (
-            <Text style={MyStyles.productEmpty}>
-              Hiện tại không có sản phẩm nào.
-            </Text>
+            <Text style={MyStyles.productEmpty}>Hiện tại không có sản phẩm nào.</Text>
           )}
           onEndReachedThreshold={0.2}
           onEndReached={() => {

@@ -28,7 +28,7 @@ const MyStyles = StyleSheet.create({
 
   cate: {
     flexDirection: "row",
-    height: 100,
+    height: 40,
   },
 
   searchBox: {

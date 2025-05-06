@@ -6,7 +6,8 @@ const BASE_URL = 'https://tranquangtruong25.pythonanywhere.com/'
 export const endpoints = {
     //order
     'orders': '/orders/',
-    'orders-details': (orderId) => `/orders/${orderId}/`,
+    'orders-info': (orderId) => `/orders/${orderId}/`,
+    'orders-detail': (id) => `/order-detail/${id}/`,
     'checkout': '/orders/checkout/',
 
     //payment
@@ -15,6 +16,7 @@ export const endpoints = {
     'foods-category': '/foods-category/',
     'foods': '/foods/',
     'food-details': (foodId) => `/foods/${foodId}/`,
+    'food-reviews': (foodId) => `/foods/${foodId}/reviews/`,
     
     //favorite
     'favorite': '/favorite/',
@@ -26,6 +28,7 @@ export const endpoints = {
     'current-user': '/users/current-user/',
     'current-user-follow': '/users/current-user/follow/',
     'current-user-favorite': '/users/current-user/favorite/',
+    'current-user-food-reviews': '/users/current-user/food-reviews/',
     //Menu
     'menus': '/menus/',
     'menus-details': (id) => `/menus/${id}/`,
@@ -34,6 +37,7 @@ export const endpoints = {
     'restaurant-details': (id) => `/restaurants/${id}/`,
     'restaurant-menus': (id) => `/restaurants/${id}/menus/`,
     'restaurant-foods': (id) => `/restaurants/${id}/foods/`,
+    'restaurant-reviews': (id) => `/restaurants/${id}/reviews/`,
 
     // Users Address
     "users-address_list": "/users-address/",
@@ -43,7 +47,6 @@ export const endpoints = {
     "users_list": "/users/",
     "users_create": "/users/",
     "users_current-user_read": "/users/current-user/",
-    "users_current-user_partial_update": "/users/current-user/",
     "users_read": (id) => `/users/${id}/`,
     "register": "/users/register/",
     'login': '/o/token/',
@@ -57,7 +60,13 @@ export const endpoints = {
     'delete-multiple-items': '/sub-cart-item/delete-multiple/',
     'restaurant-sub-cart': '/sub-cart/restaurant-sub-cart/',
     'update-sub-cart-item': '/update-sub-cart-item/',
-}
+
+    //Reviews
+    'reviews-restaurant': '/restaurant-review/',
+    'reviews-food': '/foods-review/',
+    'reviews-restaurant-detail': (id) => `/restaurant-review/${id}/`,
+    'reviews-food-detail': (id) => `/foods-review/${id}/`,
+  }
 
 const api = axios.create({
     baseURL: BASE_URL,
