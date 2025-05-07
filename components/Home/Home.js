@@ -39,6 +39,7 @@ const Home = () => {
       let res = await Apis.get(url);
       console.log("Dữ liệu món ăn:", res.data); // Log để debug
       const foodData = Array.isArray(res.data) ? res.data : [];
+
       setFoods(foodData);
       // Lấy ảnh của món ăn đầu tiên làm banner (nếu có)
       setBannerImage(foodData.length > 0 && foodData[0].image ? foodData[0].image : null);
@@ -90,7 +91,6 @@ const Home = () => {
 
   const renderHeader = () => (
     <>
-      {/* Banner */}
       <View style={MyStyles.bannerContainer}>
         {bannerImage ? (
           <Image
@@ -107,7 +107,6 @@ const Home = () => {
         <Text style={MyStyles.bannerText}>Khám phá món ăn ngon</Text>
       </View>
 
-      {/* Categories */}
       <View style={[MyStyles.row, MyStyles.wrap, MyStyles.margin]}>
         <TouchableOpacity onPress={() => filterByCategory(null)}>
           <Chip style={MyStyles.chip} icon="label">
@@ -127,10 +126,8 @@ const Home = () => {
         )}
       </View>
 
-      {/* Foods Title */}
       <Text style={[MyStyles.title, MyStyles.margin]}>Món ăn</Text>
 
-      {/* Error Message */}
       {error && (
         <Text style={[MyStyles.errorText, MyStyles.margin]}>{error}</Text>
       )}
