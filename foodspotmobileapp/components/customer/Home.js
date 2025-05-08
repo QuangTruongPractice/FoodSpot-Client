@@ -98,7 +98,7 @@ const Home = () => {
         console.info(url);
 
         let res = await Apis.get(url);
-
+        console.info("Ở đây:   ",res.data.results, 'Kết thúcccccccccccccccccccccc')
         if (isFirstPage) {
           setFoods(res.data.results);
         } else {

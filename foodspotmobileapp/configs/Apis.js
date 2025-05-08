@@ -1,7 +1,7 @@
 import axios from "axios"
 import qs from "qs";
 
-const BASE_URL = 'https://tranquangtruong25.pythonanywhere.com/'
+const BASE_URL = "http://192.168.1.4:8000/";
 
 export const endpoints = {
     //order

@@ -6,7 +6,7 @@ import Apis, { endpoints } from "../../configs/Apis";
 import MyStyles from "../../styles/MyStyles";
 import * as ImagePicker from 'expo-image-picker';
 
-const Register = () => {
+const RestaurantRegister = () => {
   const [user, setUser] = useState({
     username: "",
     email: "",
@@ -14,6 +14,7 @@ const Register = () => {
     first_name: "",
     last_name: "",
     phone_number: "",
+    restaurant_name: "",  // Thêm trường tên nhà hàng
   });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,8 @@ const Register = () => {
   const setState = (value, field) => setUser({ ...user, [field]: value });
 
   const validate = () => {
-    if (!user.username || !user.email || !user.password || !user.first_name || !user.last_name) {
-      setMsg("Vui lòng nhập đầy đủ tên đăng nhập, email, mật khẩu, họ và tên!");
+    if (!user.username || !user.email || !user.password || !user.first_name || !user.last_name || !user.restaurant_name) {
+      setMsg("Vui lòng nhập đầy đủ tên đăng nhập, email, mật khẩu, họ, tên và tên nhà hàng!");
       return false;
     }
     setMsg(null);
@@ -37,10 +38,10 @@ const Register = () => {
         const registerData = {
           ...user,
           phone_number: user.phone_number || null,
-          role: "CUSTOMER",
+          role: "RESTAURANT_USER",  // Đặt role thành RESTAURANT_USER
         };
         let res = await Apis.post(endpoints["register"], registerData);
-        nav.navigate("Login");
+        nav.navigate("Login");  // Chuyển hướng về Login sau khi đăng ký thành công
       } catch (ex) {
         setMsg(
           ex.response?.data?.error || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!"
@@ -55,15 +56,15 @@ const Register = () => {
     let { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== 'granted') {
-        alert("Permissions denied!");
+      alert("Permissions denied!");
     } else {
-        const result = await ImagePicker.launchImageLibraryAsync();
+      const result = await ImagePicker.launchImageLibraryAsync();
 
-        if (!result.canceled) {
-            setState(result.assets[0], "avatar");
-        }
+      if (!result.canceled) {
+        setState(result.assets[0], "avatar");
+      }
     }
-  }
+  };
 
   const fields = [
     { label: "Tên đăng nhập", icon: "account", secureTextEntry: false, field: "username" },
@@ -71,6 +72,7 @@ const Register = () => {
     { label: "Mật khẩu", icon: "lock", secureTextEntry: true, field: "password" },
     { label: "Họ", icon: "account", secureTextEntry: false, field: "first_name" },
     { label: "Tên", icon: "account", secureTextEntry: false, field: "last_name" },
+    { label: "Tên nhà hàng", icon: "store", secureTextEntry: false, field: "restaurant_name" },  // Thêm trường tên nhà hàng
     { label: "Số điện thoại (tuỳ chọn)", icon: "phone", secureTextEntry: false, field: "phone_number" },
   ];
 
@@ -81,7 +83,7 @@ const Register = () => {
           FoodSpot
         </Text>
         <Text style={{ textAlign: "center", marginBottom: 20 }}>
-          Create an account to get started
+          Đăng ký tài khoản nhà hàng
         </Text>
 
         <HelperText type="error" visible={!!msg}>
@@ -101,9 +103,9 @@ const Register = () => {
           />
         ))}
         <TouchableOpacity style={MyStyles.m} onPress={pick}>
-            <Text>Chọn ảnh đại diện...</Text>
+          <Text>Chọn ảnh đại diện...</Text>
         </TouchableOpacity>
-        {user.avatar && <Image source={{uri: user.avatar.uri}} style={MyStyles.avatar} />}
+        {user.avatar && <Image source={{ uri: user.avatar.uri }} style={MyStyles.avatar} />}
 
         <Button
           mode="contained"
@@ -112,7 +114,7 @@ const Register = () => {
           disabled={loading}
           style={MyStyles.margin}
         >
-          Đăng ký
+          Đăng ký nhà hàng
         </Button>
 
         <Text style={{ textAlign: "center", fontSize: 12, marginTop: 20, color: "#888" }}>
@@ -125,4 +127,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default RestaurantRegister;

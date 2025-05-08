@@ -7,7 +7,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MyDispatchContext } from "../../configs/MyContexts";
 
-const Login = () => {
+const RestaurantLogin = () => {
   const [user, setUser] = useState({ username: "", password: "" });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -45,12 +45,20 @@ const Login = () => {
         let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
         await AsyncStorage.setItem("userId", userRes.data.id.toString());
 
+        // Kiểm tra role của user
+        if (userRes.data.role !== "RESTAURANT_USER") {
+          setMsg("Tài khoản này không phải là tài khoản nhà hàng!");
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("userId");
+          return;
+        }
+
         dispatch({
           type: "login",
           payload: userRes.data,
         });
 
-        nav.navigate("Home");
+        nav.navigate("RestaurantHome"); // Điều hướng đến màn hình dành riêng cho nhà hàng
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
@@ -72,7 +80,7 @@ const Login = () => {
   return (
     <View style={[MyStyles.container, { alignItems: "center" }]}>
       <ScrollView contentContainerStyle={{ alignItems: "center", paddingVertical: 40 }}>
-        <Text style={{ fontSize: 32, fontWeight: "bold", marginBottom: 24 }}>FoodSpot</Text>
+        <Text style={{ fontSize: 32, fontWeight: "bold", marginBottom: 24 }}>FoodSpot - Nhà hàng</Text>
 
         <HelperText type="error" visible={!!msg}>
           {msg}
@@ -96,19 +104,21 @@ const Login = () => {
           loading={loading}
           disabled={loading}
           style={{ width, marginVertical: 12 }}
-        > Đăng nhập
+        >
+          Đăng nhập
         </Button>
 
         <Button
           mode="outlined"
-          onPress={() => nav.navigate("Register")}
+          onPress={() => nav.navigate("RestaurantRegister")}
           style={{ width, borderColor: "#ccc", marginBottom: 20 }}
           textColor="#000"
-        > Đăng ký
+        >
+          Đăng ký nhà hàng
         </Button>
       </ScrollView>
     </View>
   );
 };
 
-export default Login;
+export default RestaurantLogin;
