@@ -1,7 +1,7 @@
 import axios from "axios"
 import qs from "qs"
 
-const BASE_URL = "http://192.168.1.10:8000/"
+const BASE_URL = "http://192.168.1.7:8000/"
 
 export const endpoints = {
   //order
@@ -70,7 +70,7 @@ export const endpoints = {
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000
+  timeout: 60000
 })
 
 api.interceptors.request.use(
@@ -121,7 +121,7 @@ export const authApis = (token) => {
     headers: {
       Authorization: `Bearer ${token}`
     },
-    timeout: 15000
+    timeout: 60000
   })
 
   authApi.interceptors.request.use(
