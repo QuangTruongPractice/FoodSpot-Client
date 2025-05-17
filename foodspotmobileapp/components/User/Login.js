@@ -1,36 +1,34 @@
-import { ScrollView, View, Text, Dimensions } from "react-native"
-import MyStyles from "../../styles/MyStyles"
-import { Button, HelperText, TextInput } from "react-native-paper"
-import { useContext, useState } from "react"
-import Apis, { authApis, endpoints } from "../../configs/Apis"
-import { useNavigation } from "@react-navigation/native"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import { MyDispatchContext } from "../../configs/MyContexts"
-
-
+import { ScrollView, View, Text, Dimensions } from "react-native";
+import MyStyles from "../../styles/MyStyles";
+import { Button, HelperText, TextInput } from "react-native-paper";
+import { useContext, useState } from "react";
+import Apis, { authApis, endpoints } from "../../configs/Apis";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MyDispatchContext } from "../../configs/MyContexts";
 
 const Login = () => {
-  const [user, setUser] = useState({ username: "", password: "" })
-  const [msg, setMsg] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const nav = useNavigation()
-  const dispatch = useContext(MyDispatchContext)
+  const [user, setUser] = useState({ username: "", password: "" });
+  const [msg, setMsg] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const nav = useNavigation();
+  const dispatch = useContext(MyDispatchContext);
 
-  const setState = (value, field) => setUser({ ...user, [field]: value })
+  const setState = (value, field) => setUser({ ...user, [field]: value });
 
   const validate = () => {
     if (!user.username || !user.password) {
-      setMsg("Vui lòng nhập tên đăng nhập và mật khẩu!")
-      return false
+      setMsg("Vui lòng nhập tên đăng nhập và mật khẩu!");
+      return false;
     }
-    setMsg(null)
-    return true
-  }
+    setMsg(null);
+    return true;
+  };
 
   const login = async () => {
     if (validate()) {
       try {
-        setLoading(true)
+        setLoading(true);
         const loginData = {
           username: user.username,
           password: user.password,
@@ -38,40 +36,48 @@ const Login = () => {
           client_secret:
             "tVdL3xRmmzbdc1DrI4IP4SqxQAjo1uAa7BJ64l00jB5R3wZg06VPyNNwrYMHlblZFAiCnakzFQc8Pbwdov5n7g5lhuoFxbPLkMDlSmS94CM5mpbbTYzCJsYhRK7RkBMV",
           grant_type: "password",
-        }
+        };
 
-        let res = await Apis.post(endpoints["login"], loginData)
-        const accessToken = res.data.access_token
+        let res = await Apis.post(endpoints["login"], loginData);
+        const accessToken = res.data.access_token;
 
-        await AsyncStorage.setItem("token", accessToken)
-        let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"])
-        await AsyncStorage.setItem("userId", userRes.data.id.toString())
+        // Lưu token với key chính xác
+        await AsyncStorage.setItem("access_token", accessToken);
+        let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
+        await AsyncStorage.setItem("userId", userRes.data.id.toString());
 
         // Lưu thông tin người dùng vào context
         dispatch({
           type: "login",
           payload: userRes.data,
-        })
+        });
 
-        // Điều hướng dựa trên vai trò (nếu cần)
-        nav.navigate("Home")
+        // Điều hướng dựa trên vai trò
+        const userRole = userRes.data.role;
+        if (userRole === "customer") {
+          nav.navigate("Home", { screen: "Home" });
+        } else if (userRole === "RESTAURANT_USER") {
+          nav.navigate("Restaurant", { screen: "RestaurantHome" });
+        } else {
+          setMsg("Vai trò không hợp lệ!");
+        }
       } catch (ex) {
-        console.error("Lỗi đăng nhập:", ex.response?.data || ex.message)
+        console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
           ex.response?.data?.detail || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!"
-        )
+        );
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-  }
+  };
 
   const fields = [
     { label: "Tên đăng nhập", icon: "account", secureTextEntry: false, field: "username" },
     { label: "Mật khẩu", icon: "lock", secureTextEntry: true, field: "password" },
-  ]
+  ];
 
-  const width = Dimensions.get("window").width * 0.9
+  const width = Dimensions.get("window").width * 0.9;
 
   return (
     <View style={[MyStyles.container, { alignItems: "center" }]}>
@@ -106,7 +112,7 @@ const Login = () => {
 
         <Button
           mode="outlined"
-          onPress={() => nav.navigate("Register")}
+          onPress={() => nav.navigate("Auth", { screen: "Register" })}
           style={{ width, borderColor: "#ccc", marginBottom: 10 }}
           textColor="#000"
         >
@@ -117,14 +123,14 @@ const Login = () => {
           Bạn là chủ nhà hàng?{" "}
           <Text
             style={{ color: "blue", textDecorationLine: "underline" }}
-            onPress={() => nav.navigate("RestaurantRegister")}
+            onPress={() => nav.navigate("Auth", { screen: "RestaurantRegister" })}
           >
             Đăng ký tại đây
           </Text>
         </Text>
       </ScrollView>
     </View>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

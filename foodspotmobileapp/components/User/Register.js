@@ -125,7 +125,7 @@ const Register = () => {
                     });
                 }
 
-                let res = await Apis.post(endpoints['register'], form, {
+                let res = await Apis.post(endpoints['register_customer'], form, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
