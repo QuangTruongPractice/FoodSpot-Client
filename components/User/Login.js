@@ -1,4 +1,4 @@
-import { ScrollView, View, ActivityIndicator } from "react-native";
+import { ScrollView, View, Text, Dimensions } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { Button, HelperText, TextInput } from "react-native-paper";
 import { useContext, useState } from "react";
@@ -8,24 +8,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MyDispatchContext } from "../../configs/MyContexts";
 
 const Login = () => {
-  const info = [
-    { label: "Email", icon: "email", secureTextEntry: false, field: "username" }, // Sử dụng email thay vì username
-    { label: "Mật khẩu", icon: "eye", secureTextEntry: true, field: "password" },
-  ];
   const [user, setUser] = useState({ username: "", password: "" });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(false); // Thêm trạng thái kiểm tra
   const nav = useNavigation();
   const dispatch = useContext(MyDispatchContext);
 
-  const setState = (value, field) => {
-    setUser({ ...user, [field]: value });
-  };
+  const setState = (value, field) => setUser({ ...user, [field]: value });
 
   const validate = () => {
     if (!user.username || !user.password) {
-      setMsg("Vui lòng nhập email và mật khẩu!");
+      setMsg("Vui lòng nhập tên đăng nhập và mật khẩu!");
       return false;
     }
     setMsg(null);
@@ -36,105 +29,105 @@ const Login = () => {
     if (validate()) {
       try {
         setLoading(true);
-        setChecking(true); // Bắt đầu kiểm tra
-        setMsg(null);
-
         const loginData = {
-          username: user.username, // Email của người dùng
+          username: user.username,
           password: user.password,
-          client_id: "ly6xF1VvDFftDXCFUZtr3ZNNzLqcTUzv1uz7wmVO",
+          client_id: "k8KnkQk0NcvluzvlDBBeX64PRvgUDA9CUT8Av0PW",
           client_secret:
-            "tVdL3xRmmzbdc1DrI4IP4SqxQAjo1uAa7BJ64l00jB5R3wZg06VPyNNwrYMHlblZFAiCnakzFQc8Pbwdov5n7g5lhuoFxbPLkMDlSmS94CM5mpbbTYzCJsYhRK7RkBMV",
+            "PnpxNaNWxexgUpjKWRgAkeTdZVENwQFSpnaRxfjyjp8ayBrzPjykiwBzDEXQ3NM794Kcq62dFiYL0L0KWDdgwW8g7OQ7mEnrDzrDh3qJjANeoSaTujkEcrHaGQIV0f1i",
           grant_type: "password",
         };
-        console.log("Dữ liệu gửi tới /o/token/:", loginData);
 
-        // Gọi API đăng nhập
         let res = await Apis.post(endpoints["login"], loginData);
         const accessToken = res.data.access_token;
-        console.log("Access Token:", accessToken);
 
-        // Lưu token vào AsyncStorage
+        // Lưu token với key chính xác
         await AsyncStorage.setItem("access_token", accessToken);
-        console.log("Token đã lưu vào AsyncStorage:", accessToken);
-
-        // Gọi API để lấy thông tin người dùng
         let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
-        const userData = userRes.data;
-        console.log("Thông tin người dùng:", userData);
+        await AsyncStorage.setItem("userId", userRes.data.id.toString());
 
-        // Cập nhật MyUserContext
+        // Lưu thông tin người dùng vào context
         dispatch({
           type: "login",
-          payload: userData, // Lưu thông tin user
+          payload: userRes.data,
         });
 
         // Điều hướng dựa trên vai trò
-        if (userData.role === "CUSTOMER") {
-          nav.navigate("HomeTab");
-        } else if (userData.role === "RESTAURANT_USER") {
-          nav.navigate("RestaurantDashboard");
+        const userRole = userRes.data.role;
+        if (userRole === "customer") {
+          nav.navigate("Home", { screen: "Home" });
+        } else if (userRole === "RESTAURANT_USER") {
+          nav.navigate("Restaurant", { screen: "RestaurantHome" });
         } else {
           setMsg("Vai trò không hợp lệ!");
-          await AsyncStorage.removeItem("access_token");
-          dispatch({ type: "logout" });
         }
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
-          ex.response?.data?.detail ||
-            "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!"
+          ex.response?.data?.detail || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!"
         );
       } finally {
         setLoading(false);
-        setChecking(false); // Kết thúc kiểm tra
       }
     }
   };
 
+  const fields = [
+    { label: "Tên đăng nhập", icon: "account", secureTextEntry: false, field: "username" },
+    { label: "Mật khẩu", icon: "lock", secureTextEntry: true, field: "password" },
+  ];
+
+  const width = Dimensions.get("window").width * 0.9;
+
   return (
-    <View style={MyStyles.container}>
-      <ScrollView>
-        {checking && (
-          <ActivityIndicator
-            animating={true}
-            size="large"
-            style={MyStyles.margin}
-          />
-        )}
+    <View style={[MyStyles.container, { alignItems: "center" }]}>
+      <ScrollView contentContainerStyle={{ alignItems: "center", paddingVertical: 40 }}>
+        <Text style={{ fontSize: 32, fontWeight: "bold", marginBottom: 24 }}>FoodSpot</Text>
+
         <HelperText type="error" visible={!!msg}>
           {msg}
         </HelperText>
 
-        {info.map((i) => (
+        {fields.map((i) => (
           <TextInput
-            value={user[i.field]}
-            onChangeText={(t) => setState(t, i.field)}
-            style={MyStyles.margin}
             key={i.field}
             label={i.label}
+            value={user[i.field]}
+            onChangeText={(t) => setState(t, i.field)}
             secureTextEntry={i.secureTextEntry}
             right={<TextInput.Icon icon={i.icon} />}
+            style={{ width, marginVertical: 8 }}
           />
         ))}
 
         <Button
-          disabled={loading}
-          loading={loading}
-          onPress={login}
           mode="contained"
-          style={MyStyles.margin}
+          onPress={login}
+          loading={loading}
+          disabled={loading}
+          style={{ width, marginVertical: 12 }}
         >
           Đăng nhập
         </Button>
 
         <Button
-          mode="text"
-          onPress={() => nav.navigate("Register")}
-          style={MyStyles.margin}
+          mode="outlined"
+          onPress={() => nav.navigate("Auth", { screen: "Register" })}
+          style={{ width, borderColor: "#ccc", marginBottom: 10 }}
+          textColor="#000"
         >
-          Bạn chưa có tài khoản? Đăng ký ngay
+          Đăng ký
         </Button>
+
+        <Text style={{ textAlign: "center", marginTop: 10 }}>
+          Bạn là chủ nhà hàng?{" "}
+          <Text
+            style={{ color: "blue", textDecorationLine: "underline" }}
+            onPress={() => nav.navigate("Auth", { screen: "RestaurantRegister" })}
+          >
+            Đăng ký tại đây
+          </Text>
+        </Text>
       </ScrollView>
     </View>
   );

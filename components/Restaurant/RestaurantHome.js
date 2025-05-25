@@ -8,44 +8,40 @@ import MyStyles from "../../styles/MyStyles";
 import { MyUserContext, MyDispatchContext } from "../../configs/MyContexts";
 
 const RestaurantHome = () => {
-  const [restaurants, setRestaurants] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
   const dispatch = useContext(MyDispatchContext);
   const [user] = useContext(MyUserContext);
 
-  const fetchRestaurants = async () => {
+  const fetchRestaurant = async () => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
       if (!token) {
-        Alert.alert("Lỗi", "Vui lòng đăng nhập lại!");
-        navigation.navigate("Auth", { screen: "Login" });
-        return;
+        throw new Error("Vui lòng đăng nhập lại!");
       }
 
-      if (!user || user.role !== "RESTAURANT_USER" || !user.is_approved) {
-        Alert.alert("Lỗi", "Bạn không có quyền truy cập hoặc tài khoản chưa được phê duyệt!");
-        navigation.navigate("Auth", { screen: "Login" });
-        return;
+      if (!user || user.role !== "RESTAURANT_USER") {
+        throw new Error("Chỉ người dùng có vai trò RESTAURANT_USER mới có quyền truy cập!");
+      }
+
+      if (!user.is_approved) {
+        throw new Error("Tài khoản nhà hàng chưa được phê duyệt!");
       }
 
       const authApi = authApis(token);
-      const response = await authApi.get(endpoints.restaurants);
-      const userRestaurants = response.data.filter((r) => r.owner.id === user.id);
-      if (!userRestaurants.length) {
-        Alert.alert("Thông báo", "Bạn chưa có nhà hàng! Vui lòng đăng ký.");
-        navigation.navigate("Auth", { screen: "RestaurantRegister" });
-        return;
-      }
-      setRestaurants(userRestaurants);
+      const response = await authApi.get(endpoints.current_user_restaurant);
+      setRestaurant(response.data);
     } catch (ex) {
-      let errorMessage = ex.message || "Không thể tải thông tin nhà hàng!";
+      let errorMessage = ex.response?.data?.error || ex.message || "Không thể tải thông tin nhà hàng!";
       if (ex.response?.status === 401) {
         errorMessage = "Phiên đăng nhập hết hạn!";
         await AsyncStorage.removeItem("access_token");
         dispatch({ type: "logout" });
-        navigation.navigate("Auth", { screen: "Login" });
+        navigation.navigate("Login");
+      } else if (ex.response?.status === 404) {
+        errorMessage = "Bạn chưa sở hữu nhà hàng nào!";
       }
       Alert.alert("Lỗi", errorMessage);
     } finally {
@@ -54,7 +50,9 @@ const RestaurantHome = () => {
   };
 
   useEffect(() => {
-    fetchRestaurants();
+    if (user) {
+      fetchRestaurant();
+    }
   }, [user]);
 
   const handleLogout = async () => {
@@ -62,7 +60,7 @@ const RestaurantHome = () => {
       await AsyncStorage.removeItem("access_token");
       await AsyncStorage.removeItem("userId");
       dispatch({ type: "logout" });
-      navigation.navigate("Auth", { screen: "Login" });
+      navigation.navigate("Login");
     } catch (ex) {
       Alert.alert("Lỗi", "Không thể đăng xuất!");
     }
@@ -80,7 +78,7 @@ const RestaurantHome = () => {
     );
   }
 
-  if (!user || !restaurants.length) {
+  if (!user || !restaurant) {
     return null;
   }
 
@@ -93,35 +91,46 @@ const RestaurantHome = () => {
         </Paragraph>
       </View>
 
-      {restaurants.map((restaurant) => (
-        <View key={restaurant.id} style={styles.restaurantSection}>
-          <Title style={styles.restaurantTitle}>{restaurant.name}</Title>
-          <Card style={styles.card} onPress={() => navigateTo("AddFood", restaurant.id)}>
-            <Card.Content>
-              <Title>Đăng món ăn</Title>
-              <Paragraph>Thêm món ăn mới và thiết lập giá.</Paragraph>
-            </Card.Content>
-          </Card>
-          <Card style={styles.card} onPress={() => navigateTo("ManageRestaurant", restaurant.id)}>
-            <Card.Content>
-              <Title>Quản lý thông tin</Title>
-              <Paragraph>Cập nhật thông tin nhà hàng.</Paragraph>
-            </Card.Content>
-          </Card>
-          <Card style={styles.card} onPress={() => navigateTo("ManageOrders", restaurant.id)}>
-            <Card.Content>
-              <Title>Quản lý đơn hàng</Title>
-              <Paragraph>Xem và cập nhật trạng thái đơn hàng.</Paragraph>
-            </Card.Content>
-          </Card>
-          <Card style={styles.card} onPress={() => navigateTo("ManageMenus", restaurant.id)}>
-            <Card.Content>
-              <Title>Quản lý menu</Title>
-              <Paragraph>Thêm, chỉnh sửa hoặc xóa menu.</Paragraph>
-            </Card.Content>
-          </Card>
-        </View>
-      ))}
+      <View style={styles.restaurantSection}>
+        <Title style={styles.restaurantTitle}>{restaurant.name}</Title>
+        <Card
+          style={styles.card}
+          onPress={() => navigateTo("FoodManagement", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Quản lý món ăn</Title>
+            <Paragraph>Xem, thêm, sửa hoặc xóa món ăn.</Paragraph>
+          </Card.Content>
+        </Card>
+ UB
+        <Card
+          style={styles.card}
+          onPress={() => navigateTo("ManageRestaurant", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Quản lý thông tin</Title>
+            <Paragraph>Cập nhật thông tin nhà hàng.</Paragraph>
+          </Card.Content>
+        </Card>
+        <Card
+          style={styles.card}
+          onPress={() => navigateTo("ManageOrders", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Quản lý đơn hàng</Title>
+            <Paragraph>Xem và cập nhật trạng thái đơn hàng.</Paragraph>
+          </Card.Content>
+        </Card>
+        <Card
+          style={styles.card}
+          onPress={() => navigateTo("ManageMenus", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Quản lý menu</Title>
+            <Paragraph>Thêm, chỉnh sửa hoặc xóa menu.</Paragraph>
+          </Card.Content>
+        </Card>
+      </View>
 
       <Button
         mode="contained"
