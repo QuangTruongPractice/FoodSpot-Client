@@ -31,7 +31,7 @@ const RestaurantHome = () => {
       }
 
       const authApi = authApis(token);
-      const response = await authApi.get(endpoints.current_user_restaurant);
+      const response = await authApi.get(endpoints.current_restaurant);
       setRestaurant(response.data);
     } catch (ex) {
       let errorMessage = ex.response?.data?.error || ex.message || "Không thể tải thông tin nhà hàng!";

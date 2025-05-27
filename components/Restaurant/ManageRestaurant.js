@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useContext } from "react";
 import { View, ScrollView, StyleSheet, Image, TouchableOpacity, Text, Alert } from "react-native";
-import { TextInput, Button, Title, ActivityIndicator, HelperText } from "react-native-paper";
+import { TextInput, Button, Title, ActivityIndicator } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import MapView, { Marker } from "react-native-maps";
+import { WebView } from "react-native-webview";
 import axios from "axios";
 import { endpoints, authApis } from "../../configs/Apis";
 import MyStyles from "../../styles/MyStyles";
@@ -20,11 +20,21 @@ const ManageRestaurant = () => {
     avatar: null,
   });
   const [loading, setLoading] = useState(false);
-  const [addressError, setAddressError] = useState("");
+  const [addressQuery, setAddressQuery] = useState(""); // Lưu trữ địa chỉ tạm thời để tìm kiếm
   const navigation = useNavigation();
   const route = useRoute();
-  const { restaurantId } = route.params;
+  const { restaurantId } = route.params || {};
   const [user] = useContext(MyUserContext);
+
+  const GOOGLE_MAPS_API_KEY = "AIzaSyBgpRfzhwt1V_A9DmTY4Dwmh9EGb75_wNo"; 
+
+  // Validate restaurantId
+  useEffect(() => {
+    if (!restaurantId || isNaN(restaurantId)) {
+      Toast.show({ type: "error", text1: "Lỗi", text2: "ID nhà hàng không hợp lệ!" });
+      navigation.goBack();
+    }
+  }, [restaurantId]);
 
   // Lấy thông tin nhà hàng
   const fetchRestaurant = async () => {
@@ -40,6 +50,7 @@ const ManageRestaurant = () => {
       const authApi = authApis(token);
       const response = await authApi.get(endpoints["restaurant-details"](restaurantId));
       setRestaurantData(response.data);
+      setAddressQuery(response.data.address.name || "");
     } catch (ex) {
       let errorMessage = ex.response?.data?.error || ex.message || "Không thể tải thông tin nhà hàng!";
       if (ex.response?.status === 401) {
@@ -54,22 +65,25 @@ const ManageRestaurant = () => {
   };
 
   useEffect(() => {
-    fetchRestaurant();
-  }, []);
+    if (restaurantId) {
+      fetchRestaurant();
+    }
+  }, [restaurantId]);
 
   // Cập nhật giá trị cho các trường
   const handleInputChange = (field, value) => {
     setRestaurantData({ ...restaurantData, [field]: value });
-    if (field === "address.name") {
-      setAddressError(""); // Xóa lỗi khi người dùng nhập lại
-    }
   };
 
   // Tìm kiếm địa chỉ với Nominatim
-  const searchAddress = async (query) => {
+  const searchAddress = async () => {
+    if (!addressQuery) {
+      Toast.show({ type: "error", text1: "Lỗi", text2: "Vui lòng nhập địa chỉ!" });
+      return;
+    }
     try {
       const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`
       );
       if (response.data && response.data.length > 0) {
         const { lat, lon, display_name } = response.data[0];
@@ -81,13 +95,13 @@ const ManageRestaurant = () => {
             longitude: parseFloat(lon),
           },
         });
-        setAddressError("");
+        setAddressQuery(display_name);
         Toast.show({ type: "success", text1: "Thành công", text2: "Đã tìm thấy địa chỉ!" });
       } else {
-        setAddressError("Không tìm thấy địa chỉ. Vui lòng thử lại!");
+        Toast.show({ type: "error", text1: "Lỗi", text2: "Không tìm thấy địa chỉ!" });
       }
     } catch (ex) {
-      setAddressError("Không thể tìm kiếm địa chỉ. Vui lòng kiểm tra kết nối!");
+      Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể tìm kiếm địa chỉ!" });
     }
   };
 
@@ -124,18 +138,13 @@ const ManageRestaurant = () => {
       }
 
       if (!restaurantData.name || !restaurantData.phone_number || !restaurantData.address.name) {
-        Toast.show({ type: "error", text1: "Lỗi", text2: "Vui lòng nhập đầy đủ thông tin!" });
-        return;
-      }
-
-      if (!restaurantData.address.latitude || !restaurantData.address.longitude) {
-        setAddressError("Vui lòng chọn địa chỉ hợp lệ!");
+        Toast.show({ type: "error", text1: "Lỗi", text2: "Vui lòng nhập đủ thông tin!" });
         return;
       }
 
       Alert.alert(
         "Xác nhận",
-        "Bạn có chắc chắn muốn cập nhật thông tin nhà hàng?",
+        "Bạn muốn cập nhật thông tin nhà hàng?",
         [
           { text: "Hủy", style: "cancel" },
           {
@@ -143,14 +152,16 @@ const ManageRestaurant = () => {
             onPress: async () => {
               const authApi = authApis(token);
               const formData = new FormData();
-              formData.append("name", restaurantData.name);
-              formData.append("phone_number", restaurantData.phone_number);
-              formData.append("shipping_fee_per_km", restaurantData.shipping_fee_per_km || "0");
-              formData.append("address.name", restaurantData.address.name);
-              formData.append("address.latitude", restaurantData.address.latitude.toString());
-              formData.append("address.longitude", restaurantData.address.longitude.toString());
+              formData.append("name", restaurantData.name || "");
+              formData.append("phone_number", restaurantData.phone_number || "");
+              formData.append("shipping_fee_per_km", restaurantData.shipping_fee_per_km?.toString() || "");
+              formData.append("address.name", restaurantData.address.name || "");
+              if (restaurantData.address.latitude && restaurantData.address.longitude) {
+                formData.append("address.latitude", restaurantData.address.latitude.toString());
+                formData.append("address.longitude", restaurantData.address.longitude.toString());
+              }
 
-              if (restaurantData.avatar?.uri) {
+              if (restaurantData.avatar && restaurantData.avatar.uri) {
                 formData.append("avatar", {
                   uri: restaurantData.avatar.uri,
                   name: restaurantData.avatar.fileName || "avatar.png",
@@ -161,14 +172,14 @@ const ManageRestaurant = () => {
               await authApi.patch(endpoints["restaurant-details"](restaurantId), formData, {
                 headers: { "Content-Type": "multipart/form-data" },
               });
-              Toast.show({ type: "success", text1: "Thành công", text2: "Cập nhật thông tin nhà hàng thành công!" });
+              Toast.show({ type: "success", text1: "Thành công", text2: "Cập nhật thông tin thành công!" });
               navigation.goBack();
             },
           },
         ]
       );
     } catch (ex) {
-      let errorMessage = ex.response?.data?.error || ex.message || "Không thể cập nhật thông tin nhà hàng!";
+      let errorMessage = ex.response?.data?.error || ex.message || "Không thể cập nhật thông tin!";
       if (ex.response?.status === 401) {
         errorMessage = "Phiên đăng nhập hết hạn!";
         await AsyncStorage.removeItem("access_token");
@@ -179,6 +190,34 @@ const ManageRestaurant = () => {
       setLoading(false);
     }
   };
+
+  // HTML cho WebView hiển thị Google Maps Embed API
+  const mapHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Google Maps Embed</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          #map { height: 100%; width: 100%; }
+          html, body { margin: 0; padding: 0; height: 100%; }
+        </style>
+      </head>
+      <body>
+        <iframe
+          id="map"
+          frameborder="0"
+          style="border:0; width:100%; height:100%;"
+          src="https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
+            restaurantData.address.name || "Ho Chi Minh City, Vietnam"
+          )}&center=${restaurantData.address.latitude || 10.7769},${
+            restaurantData.address.longitude || 106.7009
+          }&zoom=15"
+          allowfullscreen>
+        </iframe>
+      </body>
+    </html>
+  `;
 
   if (loading) {
     return (
@@ -202,8 +241,8 @@ const ManageRestaurant = () => {
             <Text>Chưa có ảnh</Text>
           </View>
         )}
-        <TouchableOpacity onPress={pickImage} disabled={loading}>
-          <Text style={[styles.linkText, { color: loading ? "#888" : "#6200EE" }]}>Chọn ảnh</Text>
+        <TouchableOpacity style={MyStyles.margin} onPress={pickImage} disabled={loading}>
+          <Text style={{ color: loading ? "#888" : "blue" }}>Chọn ảnh</Text>
         </TouchableOpacity>
       </View>
 
@@ -213,7 +252,6 @@ const ManageRestaurant = () => {
         value={restaurantData.name}
         onChangeText={(text) => handleInputChange("name", text)}
         style={styles.input}
-        error={!restaurantData.name && loading}
       />
       <TextInput
         label="Số điện thoại"
@@ -221,7 +259,6 @@ const ManageRestaurant = () => {
         onChangeText={(text) => handleInputChange("phone_number", text)}
         style={styles.input}
         keyboardType="phone-pad"
-        error={!restaurantData.phone_number && loading}
       />
       <TextInput
         label="Phí vận chuyển (VND/km)"
@@ -230,45 +267,33 @@ const ManageRestaurant = () => {
         style={styles.input}
         keyboardType="numeric"
       />
-      <TextInput
-        label="Địa chỉ"
-        value={restaurantData.address.name}
-        onChangeText={(text) => {
-          handleInputChange("address.name", text);
-          if (text.length > 5) {
-            searchAddress(text);
-          }
-        }}
-        style={styles.input}
-        error={!!addressError}
-      />
-      <HelperText type="error" visible={!!addressError}>
-        {addressError}
-      </HelperText>
+      <View style={styles.addressContainer}>
+        <TextInput
+          label="Địa chỉ"
+          value={addressQuery}
+          onChangeText={(text) => setAddressQuery(text)}
+          style={[styles.input, { flex: 1 }]}
+        />
+        <Button
+          mode="contained"
+          onPress={searchAddress}
+          disabled={loading}
+          style={styles.searchButton}
+          labelStyle={{ fontSize: 12 }}
+        >
+          Tìm
+        </Button>
+      </View>
 
-      {/* Bản đồ */}
-      {restaurantData.address.latitude && restaurantData.address.longitude ? (
+      {/* Bản đồ với WebView */}
+      {restaurantData.address.name ? (
         <View style={styles.mapContainer}>
           <Title style={styles.subtitle}>Vị trí nhà hàng</Title>
-          <MapView
+          <WebView
             style={styles.map}
-            provider={null} // Sử dụng OpenStreetMap
-            region={{
-              latitude: restaurantData.address.latitude,
-              longitude: restaurantData.address.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: restaurantData.address.latitude,
-                longitude: restaurantData.address.longitude,
-              }}
-              title={restaurantData.name}
-              description={restaurantData.address.name}
-            />
-          </MapView>
+            originWhitelist={["*"]}
+            source={{ html: mapHtml }}
+          />
         </View>
       ) : null}
 
@@ -277,7 +302,6 @@ const ManageRestaurant = () => {
         onPress={updateRestaurant}
         disabled={loading}
         style={styles.button}
-        contentStyle={styles.buttonContent}
       >
         {loading ? <ActivityIndicator color="#fff" /> : "Cập nhật"}
       </Button>
@@ -291,26 +315,19 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginVertical: 20,
     textAlign: "center",
-    color: "#333",
   },
   subtitle: {
     fontSize: 16,
     fontWeight: "600",
     marginVertical: 10,
     marginLeft: 15,
-    color: "#555",
   },
   input: {
-    marginHorizontal: 15,
-    marginVertical: 8,
+    margin: 10,
   },
   button: {
-    marginHorizontal: 15,
-    marginVertical: 20,
-    backgroundColor: "#6200EE",
-  },
-  buttonContent: {
-    paddingVertical: 8,
+    margin: 20,
+    paddingVertical: 5,
   },
   avatarContainer: {
     alignItems: "center",
@@ -331,10 +348,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 10,
   },
-  linkText: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
   mapContainer: {
     marginVertical: 15,
     marginHorizontal: 15,
@@ -343,6 +356,15 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 200,
     borderRadius: 10,
+  },
+  addressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 10,
+  },
+  searchButton: {
+    marginLeft: 10,
+    paddingVertical: 2,
   },
 });
 
