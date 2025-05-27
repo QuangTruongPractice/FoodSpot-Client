@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Icon } from "react-native-paper";
 import * as ImagePicker from 'expo-image-picker';
 import { authApis, endpoints } from '../../configs/Apis';
+import { checkToken, loadUser } from "../../configs/Data";
 
 const Profile = () => {
   const user = useContext(MyUserContext);
@@ -58,14 +59,14 @@ const Profile = () => {
   const handleEdit = async (field, editedData) => {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem("token");
+      const token = await checkToken();
       const data = {};
       data[field] = editedData;
 
-      await authApis(token).patch(endpoints["users_current-user_read"], data);
-      let userRes = await authApis(token).get(endpoints["users_current-user_read"]);
+      await authApis(token).patch(endpoints["current-user"], data);
+      let userRes = await loadUser(token);
 
-      dispatch({ type: "login", payload: userRes.data });
+      dispatch({ type: "login", payload: userRes });
     } catch (err) {
       console.error("Lỗi cập nhật dữ liệu:", err);
     } finally {

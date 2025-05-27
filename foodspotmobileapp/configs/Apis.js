@@ -1,7 +1,7 @@
 import axios from "axios"
 import qs from "qs";
 
-const BASE_URL = 'https://tranquangtruong25.pythonanywhere.com/'
+const BASE_URL = 'http://169.254.17.234:8000/';
 
 export const endpoints = {
     //order
@@ -18,12 +18,6 @@ export const endpoints = {
     'food-details': (foodId) => `/foods/${foodId}/`,
     'food-reviews': (foodId) => `/foods/${foodId}/reviews/`,
     
-    //favorite
-    'favorite': '/favorite/',
-    'favorite-details': (id) => `/favorite/${id}/`,
-    //follow
-    'follow': '/follow/',
-    'follow-details': (id) => `/follow/${id}/`,
     //User
     'current-user': '/users/current-user/',
     'current-user-follow': '/users/current-user/follow/',
@@ -46,9 +40,8 @@ export const endpoints = {
     // Users
     "users_list": "/users/",
     "users_create": "/users/",
-    "users_current-user_read": "/users/current-user/",
     "users_read": (id) => `/users/${id}/`,
-    "register": "/users/register/",
+    "register": "/users/register-customer/",
     'login': '/o/token/',
 
     //Cart
@@ -75,7 +68,6 @@ const api = axios.create({
   
   api.interceptors.request.use(
     (config) => {
-      // Kiểm tra config.url trước khi gọi includes
       if (config.url && typeof config.url === "string") {
         if (config.url.includes("/o/token/") && config.method === "post") {
           config.headers["Content-Type"] = "application/x-www-form-urlencoded";
@@ -97,14 +89,19 @@ const api = axios.create({
   
   api.interceptors.response.use(
     (response) => {
-      console.log("Phản hồi:", response.status, response.data);
-      return response;
+      console.log("Phản hồi:", response.status, response.data)
+      return response
     },
     (error) => {
-      console.error("Lỗi phản hồi:", error.message, error.response?.data);
-      return Promise.reject(error);
+      const errorMessage =
+        error.response?.data?.error ||
+        (error.message.includes("timeout")
+          ? "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại!"
+          : "Lỗi không xác định")
+      console.error("Lỗi phản hồi:", errorMessage, error.response?.data)
+      return Promise.reject({ ...error, message: errorMessage })
     }
-  );
+  )
   
   export const authApis = (token) => {
     if (!token || typeof token !== "string") {

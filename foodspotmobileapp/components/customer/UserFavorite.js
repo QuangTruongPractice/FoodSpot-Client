@@ -1,9 +1,10 @@
-import { Text, View, FlatList, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { Text, View, FlatList, TouchableOpacity, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
-import Apis, { authApis, endpoints } from "../../configs/Apis";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
+import { authApis, endpoints } from "../../configs/Apis";
 import { IconButton } from "react-native-paper";
+import { checkToken, loadUserFavorite, loadFoodDetails, getCurrentTimeServe } from "../../configs/Data";
+import styles from "../../styles/FavoriteStyles";
 
 const UserFavorite = () => {
   const [foodDetails, setFoodDetails] = useState([]);
@@ -12,28 +13,20 @@ const UserFavorite = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      nav.replace("Login");
-      return;
-    }
+    const token = await checkToken();
     try {
-      const favRes = await authApis(token).get(endpoints["current-user-favorite"]);
-      const favFood = favRes.data;
-      console.info(favFood.data);
-
+      const favFood = await loadUserFavorite(token);
       const favoriteFoods = favFood.filter(fav => fav.status === "FAVORITE");
 
       if (favoriteFoods.length > 0) {
+        const currentTimeServe = getCurrentTimeServe();
         const details = await Promise.all(
           favoriteFoods.map(async (fav) => {
-            const foodRes = await Apis.get(endpoints["food-details"](fav.food));
-            const foodData = foodRes.data;
-            console.log("Đây là dữ liệu:", foodRes.data);
-            const minPrice = foodData.prices && foodData.prices.length > 0
-              ? Math.min(...foodData.prices.map(p => p.price))
-              : 0;
-            return { ...foodData, min_price: minPrice, fav_id: fav.id };
+            const foodData = await loadFoodDetails(fav.food);
+            const matchedPriceObj = foodData.prices?.find(p => p.time_serve === currentTimeServe);
+            const priceAtCurrentTime = matchedPriceObj ? matchedPriceObj.price : 0;
+
+            return { ...foodData, price: priceAtCurrentTime, fav_id: fav.id };
           })
         );
         console.info(details);
@@ -51,15 +44,16 @@ const UserFavorite = () => {
     loadData();
   }, []);
 
-  const handleUnfavorite = async (favId) => {
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      nav.replace("Login");
-      return;
-    }
+  const handleUnfavorite = async (foodId) => {
+    const token = await checkToken();
     try {
-      await authApis(token).patch(endpoints["favorite-details"](favId), { status: "CANCEL" });
-      setFoodDetails(prevState => prevState.filter(item => item.fav_id !== favId));
+      await authApis(token).post(endpoints["current-user-favorite"], { 
+        food: foodId,
+        status: "CANCEL" 
+      });
+      setFoodDetails(prevState =>
+        prevState.filter(item => item.id !== foodId)
+      );
     } catch (error) {
       console.error("Error unfavorite food:", error);
     }
@@ -74,11 +68,11 @@ const UserFavorite = () => {
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
             <View style={styles.priceStarContainer}>
-              <Text style={styles.price}>{item.min_price.toLocaleString()} đ</Text>
+              <Text style={styles.price}>{item.price.toLocaleString()} đ</Text>
               <Text style={styles.star}>⭐ {item.star_rating}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.favoriteButton} onPress={() => handleUnfavorite(item.fav_id)}>
+          <TouchableOpacity style={styles.favoriteButton} onPress={() => handleUnfavorite(item.id)}>
             <View style={styles.actionsColumn}>
               <IconButton icon="heart" size={24} iconColor="red" containerColor="#ffe6e6" style={{ borderRadius: 8, marginRight: 4, marginTop: 8 }} />
             </View>
@@ -100,18 +94,5 @@ const UserFavorite = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: "#fff", marginBottom: 15, borderRadius: 8, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  itemContainer: { flexDirection: "row", alignItems: "center", padding: 10 },
-  avatar: { width: 80, height: 80, borderRadius: 8, backgroundColor: "#eee" },
-  infoContainer: { flex: 1, marginLeft: 10 },
-  name: { fontSize: 16, fontWeight: "bold", color: "#333" },
-  description: { fontSize: 13, color: "#888", marginTop: 2 },
-  priceStarContainer: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  price: { fontSize: 14, color: "#e74c3c", fontWeight: "600" },
-  star: { fontSize: 13, color: "#f39c12", marginLeft: 10 },
-  favoriteButton: { width: 32, height: 32, backgroundColor: "#ffe6e6", borderRadius: 8, justifyContent: "center", alignItems: "center", marginLeft: 10 },
-});
 
 export default UserFavorite;

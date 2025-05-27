@@ -2,13 +2,13 @@ import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View, Scrol
 import MyStyles from "../../styles/MyStyles";
 import { useEffect, useState } from "react";
 import { Chip, Searchbar } from "react-native-paper";
-import Apis, { endpoints } from "../../configs/Apis";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import Cart from "./Cart";
 import RNPickerSelect from 'react-native-picker-select';
 import Swiper from 'react-native-swiper';
+import { getCurrentTimeServe, loadFoodCategory, loadFood } from "../../configs/Data";
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
@@ -23,23 +23,6 @@ const Home = () => {
   const nav = useNavigation();
   const [selectedRange, setSelectedRange] = useState(null);
   const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
-
-  function getCurrentTimeServe() {
-    const now = new Date();
-    const hour = now.getHours();
-
-    if (hour >= 5 && hour < 11) {
-        return 'MORNING';
-    } else if (hour >= 11 && hour < 13) {
-        return 'NOON';
-    } else if (hour >= 13 && hour < 23) {
-        return 'EVENING';
-    } else if (hour >= 23 || hour < 5) {
-        return 'NIGHT';
-    } else {
-        return null;
-    }
-  }
 
   const handleRangeChange = (value) => {
     setSelectedRange(value);
@@ -75,8 +58,8 @@ const Home = () => {
   ];
 
   const loadCates = async () => {
-    let res = await Apis.get(endpoints["foods-category"]);
-    setCategories(res.data.results);
+    let res = await loadFoodCategory();
+    setCategories(res.results);
   };
 
   const loadFoods = async () => {
@@ -88,23 +71,14 @@ const Home = () => {
       else setLoadingMore(true);
 
       try {
-        let url = `${endpoints["foods"]}?page=${page}`;
-
-        if (q) url += `&search=${q}`;
-        if (cateId) url += `&category_id=${cateId}`;
-        if (priceMin) url += `&price_min=${priceMin}`;
-        if (priceMax) url += `&price_max=${priceMax}`;
-
-        console.info(url);
-
-        let res = await Apis.get(url);
-
+        const res = await loadFood({ page, q, cateId, priceMin, priceMax });
+        const availableFoods = res.results.filter(r => r.is_available === true);
         if (isFirstPage) {
-          setFoods(res.data.results);
+          setFoods(availableFoods);
         } else {
-          setFoods([...foods, ...res.data.results]);
+          setFoods([...foods, ...availableFoods]);
         }
-        if (res.data.next === null) {
+        if (res.next === null) {
           setPage(0);
         } // Ngăn load thêm khi hết dữ liệu
       } catch (ex) {

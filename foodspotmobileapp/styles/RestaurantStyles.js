@@ -1,0 +1,62 @@
+import { StyleSheet } from "react-native";
+
+const styles = StyleSheet.create({
+  foodCard: { width: "48%", backgroundColor: "#f9f9f9", borderRadius: 10, marginBottom: 15, overflow: "hidden", elevation: 2 },
+  foodImage: { width: "100%", height: 100, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  foodName: { fontSize: 14, fontWeight: "bold", marginTop: 6, marginHorizontal: 8 },
+  foodPrice: { fontSize: 13, color: "#e53935", fontWeight: "bold", marginBottom: 8, marginHorizontal: 8 },
+  menuItem: { backgroundColor: "#f1f1f1", borderRadius: 8, padding: 12, marginBottom: 12 },
+  menuTitle: { fontSize: 16, fontWeight: "bold" },
+  menuDesc: { fontSize: 13, color: "#666", marginTop: 4 },
+  restaurantCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f5f5f5", padding: 10, borderRadius: 10, margin: 10, elevation: 2 },
+  restaurantAvatar: { width: 50, height: 50, borderRadius: 25 },
+  restaurantName: { fontSize: 16, fontWeight: "bold" },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  star: { color: "#2ecc71", marginRight: 4 },
+  ratingText: { color: "#2ecc71", fontWeight: "bold" },
+  actionsColumn: { flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end" },
+  actionButton: { backgroundColor: "#eee", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
+  actionButtonColor: { backgroundColor: "#9c27b0", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
+  actionButtonText: { fontWeight: "bold", color: "#333" },
+  actionButtonTextColor: { fontWeight: "bold", color: "white" },
+  menuHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  reviewsContainer: { flexDirection: "row", backgroundColor: "#f0f0f0", borderRadius: 8, padding: 10, marginBottom: 10, alignItems: "flex-start",},
+  reviewsAvatar: {width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: "#ccc", },
+  container: { flexDirection: "row", alignItems: "flex-start", padding: 8, borderTopWidth: 1, borderTopColor: "#eee", backgroundColor: "#fff" },
+  middleContent: { flex: 1 },
+  username: { fontWeight: "bold", fontSize: 14, marginBottom: 2 },
+  starsRow: { flexDirection: "row", marginBottom: 4 },
+  commentRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f1f1", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  textInput: { flex: 1, fontSize: 14, maxHeight: 60, padding: 0 },
+  sendButton: { paddingLeft: 6 },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 20,
+  },
+  modalTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 20,
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+});
+
+export default styles;

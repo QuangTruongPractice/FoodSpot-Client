@@ -1,9 +1,13 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, Modal, Alert, TouchableOpacity, FlatList, Image, ActivityIndicator, StyleSheet, TextInput } from "react-native";
-import Apis, { authApis,endpoints } from "../../configs/Apis";
+import { useEffect, useState, useCallback } from "react";
+import { View, Text, Modal, Alert, TouchableOpacity, FlatList, Image, ActivityIndicator, TextInput } from "react-native";
+import { authApis,endpoints } from "../../configs/Apis";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Icon, Button } from "react-native-paper";
+import { getCurrentTimeServe, checkToken, loadRestaurantReviews, loadUser, loadRestaurantDetails, 
+  loadRestaurantMenu, loadRestaurantFood, loadUserFollow
+ } from "../../configs/Data";
+import styles from "../../styles/RestaurantStyles";
 
 const RestaurantDetails = ({ route }) => {
   const { restaurantId } = route.params;
@@ -14,8 +18,10 @@ const RestaurantDetails = ({ route }) => {
   const [token, setToken] = useState(null);
   const [activeTab, setActiveTab] = useState("Món ăn");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [foodPage, setFoodPage] = useState(1);
   const [followStatus, setFollowStatus] = useState(null);
-  const [followId, setFollowId] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [comment, setComment] = useState("");
   const [star, setStar] = useState(0);
@@ -27,23 +33,6 @@ const RestaurantDetails = ({ route }) => {
   const [editingReview, setEditingReview] = useState(null);
   const [editedComment, setEditedComment] = useState("");
 
-  function getCurrentTimeServe() {
-    const now = new Date();
-    const hour = now.getHours();
-
-    if (hour >= 5 && hour < 11) {
-        return 'MORNING';
-    } else if (hour >= 11 && hour < 17) {
-        return 'NOON';
-    } else if (hour >= 17 && hour < 23) {
-        return 'EVENING';
-    } else if (hour >= 23 || hour < 5) {
-        return 'NIGHT';
-    } else {
-        return null;
-    }
-  }
-
   useEffect(() => {
     const intervalId = setInterval(() => {
         setCurrentTimeServe(getCurrentTimeServe());
@@ -53,21 +42,66 @@ const RestaurantDetails = ({ route }) => {
   }, []);
 
   const loadReviews = async () => {
-    const reviewsRes = await Apis.get(endpoints["restaurant-reviews"](restaurantId));
-    setReviews(reviewsRes.data);
-  }
+    if (reviewPage <= 0) {
+        return;
+    } else {
+      const isFirstPage = reviewPage === 1;
+      if (isFirstPage) setLoading(true);
+      else setLoadingMore(true);
+      try {
+          const res = await loadRestaurantReviews(restaurantId, {reviewPage});
+          if (isFirstPage) {
+            setReviews(res.results);
+          } else {
+            setReviews([...reviews, ...res.results]);
+          }
+          if (res.next === null) {
+            setReviewPage(0);
+          } 
+      } catch (ex) {
+          console.error(ex);
+      } finally {
+          setLoading(false);
+          setLoadingMore(false);
+      }
+    }
+  };
+
+  const loadFoods = async () => {
+    if (foodPage <= 0) {
+        return;
+    } else {
+      const isFirstPage = foodPage === 1;
+      if (isFirstPage) setLoading(true);
+      else setLoadingMore(true);
+      try {
+          const res = await loadRestaurantFood(restaurantId, {foodPage});
+          const availableFoods = res.results.filter(r => r.is_available === true);
+          if (isFirstPage) {
+            setFoods(availableFoods);
+          } else {
+            setFoods([...foods, ...availableFoods]);
+          }
+          if (res.next === null) {
+            setFoodPage(0);
+          } 
+      } catch (ex) {
+          console.error(ex);
+      } finally {
+          setLoading(false);
+          setLoadingMore(false);
+      }
+    }
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const menuRes = await Apis.get(endpoints["restaurant-menus"](restaurantId));
-      setMenus(menuRes.data);
+      const menuRes = await loadRestaurantMenu(restaurantId);
+      setMenus(menuRes);
 
-      const foodRes = await Apis.get(endpoints["restaurant-foods"](restaurantId));
-      setFoods(foodRes.data);
-
-      const restaurantRes = await Apis.get(endpoints["restaurant-details"](restaurantId));
-      setRestaurant(restaurantRes.data);
+      const restaurantRes = await loadRestaurantDetails(restaurantId);
+      setRestaurant(restaurantRes);
 
       const id = await AsyncStorage.getItem("userId");
       setUserId(id)
@@ -78,22 +112,18 @@ const RestaurantDetails = ({ route }) => {
     }
   };
 
-  const fetchAuthData = async () => {
+  const fetchAuthData = async (token) => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      const userRes = await authApis(token).get(endpoints["users_current-user_read"]);
-      setCurrentUser(userRes.data);
+      const userRes = await loadUser(token);
+      setCurrentUser(userRes);
   
-      const followRes = await authApis(token).get(endpoints["current-user-follow"]);
-      if (followRes.data) {
-        const follow = followRes.data.find((item) => item.restaurant === restaurantId);
+      const followRes = await loadUserFollow(token)
+      if (followRes) {
+        const follow = followRes.find((item) => item.restaurant === restaurantId);
         if (follow) {
           setFollowStatus(follow.status);
-          setFollowId(follow.id);
         }
-      } else {
-        setFollowStatus("NOT_FOLLOWED");
       }
     } catch (error) {
       console.error("Error fetching auth data:", error);
@@ -105,67 +135,68 @@ const RestaurantDetails = ({ route }) => {
   useFocusEffect(
     useCallback(() => {
       const checkTokenAndLoadAuth= async () => {
-        const token = await AsyncStorage.getItem("token");
+        const token = await checkToken();
         if (token) {
           setToken(token)
-          fetchAuthData();
-          hasUserOrderedAtRestaurant();
+          await fetchAuthData(token);
+          await hasUserOrderedAtRestaurant(token);
         }else {
           setToken(null)
         }
       };
       fetchData();
-      loadReviews();
       checkTokenAndLoadAuth();
     }, [restaurantId])
   );
 
-  const hasUserOrderedAtRestaurant = async () => {
+  useEffect(() => {
+    loadReviews();
+  }, [reviewPage]);
+
+  useEffect(() => {
+    loadFoods();
+  }, [foodPage]);
+
+  const hasUserOrderedAtRestaurant = async (token) => {
     try {
-      const token = await AsyncStorage.getItem("token");
       const ordersRes = await authApis(token).get(endpoints["orders"]);
-      const userOrders = ordersRes.data;
-      console.info(userOrders)
-      const hasOrder = userOrders.some((order) => order.restaurant == restaurantId);
-      console.info(hasOrder)
-      if(hasOrder)
-        setCanReview(true)
+      const userOrders = ordersRes.data?.results || [];  // lấy mảng kết quả an toàn
+
+      const hasOrder = userOrders.some(
+        (order) => order.restaurant === restaurantId
+      );
+
+      if (hasOrder) setCanReview(true);
       
     } catch (error) {
       console.error("Error checking user orders:", error);
       return false;
     }
   };
-  
+
   const handleFollow = async () => {
-    const token = await AsyncStorage.getItem("token");
+    const token = await checkToken();
     if (followStatus === "FOLLOW") {
       // Hủy follow
-      await authApis(token).patch(endpoints["follow-details"](followId), {
+      await authApis(token).post(endpoints["current-user-follow"], {
+        restaurant: restaurantId,
         status: "CANCEL"
       });
         setFollowStatus("CANCEL");
-    } else if (followStatus === "CANCEL"){
-      await authApis(token).patch(endpoints["follow-details"](followId), {
-        status: "FOLLOW"
-      });
-      setFollowStatus("FOLLOW");
-    } else {
-      await authApis(token).post(endpoints["follow"], {
-        user: userId,
+    } else{
+      await authApis(token).post(endpoints["current-user-follow"], {
         restaurant: restaurantId,
-        status: "FOLLOW",
+        status: "FOLLOW"
       });
       setFollowStatus("FOLLOW");
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (token) => {
     if (!comment || star === 0) {
       alert("Vui lòng nhập đánh giá và chọn số sao.");
       return;
     }
-    const token = await AsyncStorage.getItem("token");
     const res = await authApis(token).post(endpoints["reviews-restaurant"], {
       comment: comment,
       star: star,
@@ -178,15 +209,13 @@ const RestaurantDetails = ({ route }) => {
     setStar(0);
   };
 
-  const handleDelete = async (reviewId) => {
-    const token = await AsyncStorage.getItem("token");
+  const handleDelete = async (token, reviewId) => {
     await authApis(token).delete(endpoints["reviews-restaurant-detail"](reviewId));
     console.log("Đang xóa đánh giá", reviewId);
     await loadReviews();
   };
   
-  const handleEdit = async (reviewId, editedComment) => {
-    const token = await AsyncStorage.getItem("token");
+  const handleEdit = async (token, reviewId, editedComment) => {
     await authApis(token).patch(endpoints["reviews-restaurant-detail"](reviewId), {
       comment: editedComment
     });
@@ -293,13 +322,14 @@ const RestaurantDetails = ({ route }) => {
             }}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={{ paddingBottom: 20 }}
-            ListEmptyComponent={
-              <View style={{ alignItems: "center", marginTop: 20 }}>
-                <Text style={{ fontSize: 16, color: "#666" }}>
-                  Nhà hàng không hoạt động vào thời gian này
-                </Text>
-              </View>
-            }
+            ListEmptyComponent={() => (
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>Nhà hàng không hoạt động vào thời gian này</Text>
+            )}
+            onEndReached={() => {
+              if (!loadingMore && foodPage > 0) setFoodPage(foodPage + 1);
+            }}
+            onEndReachedThreshold={0.2}
+            ListFooterComponent={loadingMore ? <ActivityIndicator size={30} /> : null}
           />
         ) : activeTab === "Menu" ? (
           <FlatList
@@ -349,7 +379,7 @@ const RestaurantDetails = ({ route }) => {
                     style={styles.textInput}
                     multiline
                   />
-                  <TouchableOpacity onPress={() => handleSubmit()} style={styles.sendButton}>
+                  <TouchableOpacity onPress={() => handleSubmit(token)} style={styles.sendButton}>
                     <Icon source="send" size={22} color="#e53935" />
                   </TouchableOpacity>
                 </View>
@@ -394,7 +424,7 @@ const RestaurantDetails = ({ route }) => {
                         {
                           text: "Xóa",
                           style: "destructive",
-                          onPress: () => handleDelete(item.id),
+                          onPress: () => handleDelete(token, item.id),
                         },
                         { text: "Hủy", style: "cancel" },
                       ])
@@ -406,11 +436,14 @@ const RestaurantDetails = ({ route }) => {
               </View>
             )}
             keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text style={{ textAlign: "center", marginTop: 20 }}>
-                Chưa có đánh giá nào
-              </Text>
-            }
+            ListEmptyComponent={() => (
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>Chưa có đánh giá nào</Text>
+            )}
+            onEndReached={() => {
+              if (!loadingMore && reviewPage > 0) setReviewPage(reviewPage + 1);
+            }}
+            onEndReachedThreshold={0.2}
+            ListFooterComponent={loadingMore ? <ActivityIndicator size={30} /> : null}
             contentContainerStyle={{ paddingBottom: 20 }}
           />
           <Modal visible={modalVisible} animationType="slide" transparent>
@@ -425,17 +458,15 @@ const RestaurantDetails = ({ route }) => {
                   multiline
                 />
                 <View style={styles.modalButtons}>
-                  <Button
-                    mode="contained"
+                  <Button mode="contained"
                     onPress={() => {
-                      handleEdit(editingReview.id, editedComment);
+                      handleEdit(token, editingReview.id, editedComment);
                       setModalVisible(false);
                     }}
                   >
                     Lưu
                   </Button>
-                  <Button
-                    mode="text"
+                  <Button mode="text"
                     onPress={() => setModalVisible(false)}
                     style={{ marginLeft: 10 }}
                   >
@@ -452,64 +483,5 @@ const RestaurantDetails = ({ route }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  foodCard: { width: "48%", backgroundColor: "#f9f9f9", borderRadius: 10, marginBottom: 15, overflow: "hidden", elevation: 2 },
-  foodImage: { width: "100%", height: 100, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
-  foodName: { fontSize: 14, fontWeight: "bold", marginTop: 6, marginHorizontal: 8 },
-  foodPrice: { fontSize: 13, color: "#e53935", fontWeight: "bold", marginBottom: 8, marginHorizontal: 8 },
-  menuItem: { backgroundColor: "#f1f1f1", borderRadius: 8, padding: 12, marginBottom: 12 },
-  menuTitle: { fontSize: 16, fontWeight: "bold" },
-  menuDesc: { fontSize: 13, color: "#666", marginTop: 4 },
-  restaurantCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f5f5f5", padding: 10, borderRadius: 10, margin: 10, elevation: 2 },
-  restaurantAvatar: { width: 50, height: 50, borderRadius: 25 },
-  restaurantName: { fontSize: 16, fontWeight: "bold" },
-  ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  star: { color: "#2ecc71", marginRight: 4 },
-  ratingText: { color: "#2ecc71", fontWeight: "bold" },
-  actionsColumn: { flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end" },
-  actionButton: { backgroundColor: "#eee", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
-  actionButtonColor: { backgroundColor: "#9c27b0", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6 },
-  actionButtonText: { fontWeight: "bold", color: "#333" },
-  actionButtonTextColor: { fontWeight: "bold", color: "white" },
-  menuHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  reviewsContainer: { flexDirection: "row", backgroundColor: "#f0f0f0", borderRadius: 8, padding: 10, marginBottom: 10, alignItems: "flex-start",},
-  reviewsAvatar: {width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: "#ccc", },
-  container: { flexDirection: "row", alignItems: "flex-start", padding: 8, borderTopWidth: 1, borderTopColor: "#eee", backgroundColor: "#fff" },
-  middleContent: { flex: 1 },
-  username: { fontWeight: "bold", fontSize: 14, marginBottom: 2 },
-  starsRow: { flexDirection: "row", marginBottom: 4 },
-  commentRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f1f1", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  textInput: { flex: 1, fontSize: 14, maxHeight: 60, padding: 0 },
-  sendButton: { paddingLeft: 6 },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 20,
-  },
-  modalTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 20,
-    textAlignVertical: "top",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-});
 
 export default RestaurantDetails;

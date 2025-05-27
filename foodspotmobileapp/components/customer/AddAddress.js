@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApis, endpoints } from "../../configs/Apis";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { TextInput } from "react-native-paper";
+import { checkToken, loadUser } from "../../configs/Data";
+import styles from "../../styles/AddAddressStyles";
 
 const AddAddress = () => {
   const nav = useNavigation();
@@ -18,18 +20,19 @@ const AddAddress = () => {
 
   const setState = (value, key) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const loadUserData = async () => {
+    try {
+      const token = await checkToken(nav);
+      const user = await loadUser(token);
+      const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
+      setForm((prev) => ({ ...prev, name: fullName, phone: user.phone_number ?? "" }));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
-        const user = (await authApis(token).get(endpoints["current-user"])).data;
-        const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
-        setForm((prev) => ({ ...prev, name: fullName, phone: user.phone_number ?? "" }));
-      } catch (e) {
-        console.warn(e);
-      }
-    })();
+    loadUserData();
   }, []);
 
   const onSave = async () => {
@@ -144,14 +147,3 @@ const AddAddress = () => {
 };
 
 export default AddAddress;
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { padding: 20 },
-  textInput: { marginBottom: 18 },
-  mapContainer: { width: '100%', height: 300, marginVertical: 20 },
-  confirmBtn: { backgroundColor: "#2196F3", paddingVertical: 12, borderRadius: 8, alignItems: "center", marginBottom: 10 },
-  confirmBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  saveBtn: { backgroundColor: "#9c27b0", paddingVertical: 14, alignItems: "center" },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-});

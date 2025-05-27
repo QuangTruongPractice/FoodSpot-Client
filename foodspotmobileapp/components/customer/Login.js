@@ -6,6 +6,7 @@ import Apis, { authApis, endpoints } from "../../configs/Apis";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MyDispatchContext } from "../../configs/MyContexts";
+import { loadUser } from "../../configs/Data";
 
 const Login = () => {
   const [user, setUser] = useState({ username: "", password: "" });
@@ -32,9 +33,9 @@ const Login = () => {
         const loginData = {
           username: user.username,
           password: user.password,
-          client_id: "3bLZ1tgXrCBf7MRwKi9LLp2Bxeawwff3Pkd7OdpV",
+          client_id: "mZRkDrLtg9De3TnMKW3B208Pl4ubbUfgwOjX2NCv",
           client_secret:
-            "r2i2lgO9PkEtMcUchhYBzNMwXVWAuZp8VVst6bZ3iNubliJNlMaN3plMuBZXeXASWuTc5SDGuaWj9VQORzUpFE8WAwCa9XAdIqrL1Yj9PhUNdgG99ZFokYAf8zQ9GEom",
+            "iTqsj04Ua6EpU0YQs5TCO4fW69vd7j6VBu9wKW9nPldV6TuWPDf42cV9eTIgAma3zjD4HKcSwltqZBrlNuPD31lbNuunOl0y8KvCjW4WrJy4TxqaMIUJrmwv6g2zBYSY",
           grant_type: "password",
         };
 
@@ -42,12 +43,20 @@ const Login = () => {
         const accessToken = res.data.access_token;
 
         await AsyncStorage.setItem("token", accessToken);
-        let userRes = await authApis(accessToken).get(endpoints["users_current-user_read"]);
-        await AsyncStorage.setItem("userId", userRes.data.id.toString());
+        let userRes = await loadUser(accessToken);
+        await AsyncStorage.setItem("userId", userRes.id.toString());
+
+        // Kiểm tra role của user
+        if (userRes.role !== "CUSTOMER") {
+          setMsg("Tài khoản này không phải là tài khoản khách hàng!");
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("userId");
+          return;
+        }
 
         dispatch({
           type: "login",
-          payload: userRes.data,
+          payload: userRes,
         });
 
         nav.navigate("Home");
@@ -96,16 +105,28 @@ const Login = () => {
           loading={loading}
           disabled={loading}
           style={{ width, marginVertical: 12 }}
-        > Đăng nhập
+        >
+          Đăng nhập
         </Button>
 
         <Button
           mode="outlined"
           onPress={() => nav.navigate("Register")}
-          style={{ width, borderColor: "#ccc", marginBottom: 20 }}
+          style={{ width, borderColor: "#ccc", marginBottom: 10 }}
           textColor="#000"
-        > Đăng ký
+        >
+          Đăng ký
         </Button>
+
+        <Text style={{ textAlign: "center", marginTop: 10 }}>
+          Bạn là chủ nhà hàng?{" "}
+          <Text
+            style={{ color: "blue", textDecorationLine: "underline" }}
+            onPress={() => nav.navigate("RestaurantLogin")}
+          >
+            Đăng nhập tại đây
+          </Text>
+        </Text>
       </ScrollView>
     </View>
   );
