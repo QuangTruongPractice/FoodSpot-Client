@@ -41,7 +41,7 @@ const AddAddress = () => {
         alert("Vui lòng nhập đầy đủ Tên địa chỉ và Địa chỉ.");
         return;
       }
-      const token = await AsyncStorage.getItem("token");
+      const token = await checkToken(nav);
       if (!token) return;
       await authApis(token).post(endpoints["users-address_list"], {
         latitude: form.latitude, longitude: form.longitude, name: form.addressName,

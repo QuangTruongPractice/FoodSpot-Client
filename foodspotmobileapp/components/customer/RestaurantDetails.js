@@ -135,7 +135,7 @@ const RestaurantDetails = ({ route }) => {
   useFocusEffect(
     useCallback(() => {
       const checkTokenAndLoadAuth= async () => {
-        const token = await checkToken();
+        const token = await checkToken(nav);
         if (token) {
           setToken(token)
           await fetchAuthData(token);
@@ -168,7 +168,7 @@ const RestaurantDetails = ({ route }) => {
   };
 
   const handleFollow = async () => {
-    const token = await checkToken();
+    const token = await checkToken(nav);
     if (followStatus === "FOLLOW") {
       // Hủy follow
       await authApis(token).post(endpoints["current-user-follow"], {

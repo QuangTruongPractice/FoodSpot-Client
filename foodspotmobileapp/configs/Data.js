@@ -2,10 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Apis, { authApis, endpoints } from './Apis';
 
 export const checkToken = async (nav) => {
-  const token = await AsyncStorage.getItem('token');
+  const token = await AsyncStorage.getItem('access_token');
   if (!token) {
     nav.replace('Login');
-    return null; // hoặc bạn có thể throw error tùy cách xử lý
+    return null; 
   }
   return token;
 };
@@ -17,7 +17,7 @@ export function getCurrentTimeServe() {
   if (hour >= 5 && hour < 11) {
     return 'MORNING';
   } else if (hour >= 11 && hour < 13) {
-    return 'EVENING';
+    return 'NOON';
   } else if (hour >= 13 && hour < 23) {
     return 'EVENING';
   } else if (hour >= 23 || hour < 5) {

@@ -19,7 +19,7 @@ const Order = () => {
     else setLoadingMore(true);
 
     try {
-      const token = await checkToken();
+      const token = await checkToken(nav);
       const res = await loadOrder(token, { page });
 
       if (isFirstPage) {

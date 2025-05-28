@@ -22,7 +22,7 @@ const Profile = () => {
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("access_token");
       console.log("Token đã được xóa khỏi AsyncStorage");
       dispatch({ type: "logout" });
     } catch (error) {

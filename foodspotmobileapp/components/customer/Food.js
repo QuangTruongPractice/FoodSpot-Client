@@ -8,6 +8,7 @@ import { checkToken, getCurrentTimeServe, loadRestaurantDetails, loadFoodDetails
   loadFoodReviews, loadUserFavorite, loadMenu
  } from "../../configs/Data";
 import styles from "../../styles/FoodStyles";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Food = ({ route }) => {
   const { foodId } = route.params; // Lấy foodId từ route.params
@@ -27,7 +28,7 @@ const Food = ({ route }) => {
     const foodRes = await loadFoodDetails(foodId);
     setFoodDetails(foodRes);
 
-    const token = await checkToken(nav);
+    const token = await AsyncStorage.getItem("access_token");
     if (token) {
       const favList = await loadUserFavorite(token);
       const foundFav = favList?.find((item) => item.food === foodId);
@@ -74,8 +75,6 @@ const Food = ({ route }) => {
 
     for (let menu of allMenus) {
       if (menu.time_serve !== currentTimeServe) continue;
-
-      // 🔥 Chỉ lấy món còn available
       const availableFoods = menu.foods.filter(f => f.is_available === true);
 
       const matchedFood = availableFoods.find((f) => f.id === foodId);

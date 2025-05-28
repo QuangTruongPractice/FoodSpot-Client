@@ -116,6 +116,7 @@ const Register = () => {
                 form.append("last_name", user.last_name);
                 form.append("phone_number", user.phone_number || "");
                 form.append("role", "CUSTOMER");
+
                 if (user.avatar) {
                     form.append('avatar', {
                         uri: user.avatar.uri,
@@ -125,7 +126,8 @@ const Register = () => {
                         : 'image/jpeg'
                     });
                 }
-                let res = await Apis.post(endpoints['register'], form, {
+
+                let res = await Apis.post(endpoints['register_customer'], form, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }

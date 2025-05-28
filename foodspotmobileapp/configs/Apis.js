@@ -24,6 +24,7 @@ export const endpoints = {
     'current-user-follow': '/users/current-user/follow/',
     'current-user-favorite': '/users/current-user/favorite/',
     'current-user-food-reviews': '/users/current-user/food-reviews/',
+    "current_restaurant":"/users/current-user/restaurant/",
     //Menu
     'menus': '/menus/',
     'menus-details': (id) => `/menus/${id}/`,
@@ -42,7 +43,8 @@ export const endpoints = {
     "users_list": "/users/",
     "users_create": "/users/",
     "users_read": (id) => `/users/${id}/`,
-    "register": "/users/register-customer/",
+    "register_customer": "/users/register-customer/",
+    "register_restaurant": "/users/register-restaurant/",
     'login': '/o/token/',
 
     //Cart

@@ -45,7 +45,7 @@ const Cart = () => {
   }, [isFocused]);
 
   const updateQuantity = async (sub_cart_item_id, quantity) => {
-    const token = await AsyncStorage.getItem("token");
+    const token = await checkToken(nav);
     try {
       const res = await authApis(token).patch(endpoints["update-sub-cart-item"], {
         sub_cart_item_id: sub_cart_item_id,
@@ -119,7 +119,7 @@ const Cart = () => {
           text: "Xóa",
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem("token");
+              const token = await checkToken(nav);
               // Xóa toàn bộ subCart nếu được chọn
               if (selectedSubCarts.size > 0) {
                 await authApis(token).post(endpoints["delete-multiple-sub-carts"], {

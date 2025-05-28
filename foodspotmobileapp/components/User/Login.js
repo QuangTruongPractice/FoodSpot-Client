@@ -2,7 +2,7 @@ import { ScrollView, View, Text, Dimensions } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { Button, HelperText, TextInput } from "react-native-paper";
 import { useContext, useState } from "react";
-import Apis, { authApis, endpoints } from "../../configs/Apis";
+import Apis, { endpoints } from "../../configs/Apis";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MyDispatchContext } from "../../configs/MyContexts";
@@ -42,24 +42,23 @@ const Login = () => {
         let res = await Apis.post(endpoints["login"], loginData);
         const accessToken = res.data.access_token;
 
-        await AsyncStorage.setItem("token", accessToken);
+        await AsyncStorage.setItem("access_token", accessToken);
         let userRes = await loadUser(accessToken);
         await AsyncStorage.setItem("userId", userRes.id.toString());
-
-        // Kiểm tra role của user
-        if (userRes.role !== "CUSTOMER") {
-          setMsg("Tài khoản này không phải là tài khoản khách hàng!");
-          await AsyncStorage.removeItem("token");
-          await AsyncStorage.removeItem("userId");
-          return;
-        }
 
         dispatch({
           type: "login",
           payload: userRes,
         });
 
-        nav.navigate("Home");
+        const userRole = userRes.role;
+        if (userRole === "CUSTOMER") {
+          nav.navigate("Home");
+        } else if (userRole === "RESTAURANT_USER") {
+          nav.navigate("Restaurant", { screen: "RestaurantHome" });
+        } else {
+          setMsg("Vai trò không hợp lệ!");
+        }
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
@@ -122,9 +121,9 @@ const Login = () => {
           Bạn là chủ nhà hàng?{" "}
           <Text
             style={{ color: "blue", textDecorationLine: "underline" }}
-            onPress={() => nav.navigate("RestaurantLogin")}
+            onPress={() => nav.navigate("Auth", { screen: "RestaurantRegister" })}
           >
-            Đăng nhập tại đây
+            Đăng ký tại đây
           </Text>
         </Text>
       </ScrollView>

@@ -12,7 +12,7 @@ const UserFollow = () => {
 
     const loadData = async () => {
         setLoading(true);
-        const token = await checkToken();
+        const token = await checkToken(nav);
 
         try {
             const followRestaurant = await loadUserFollow(token);
@@ -42,7 +42,7 @@ const UserFollow = () => {
     }, []);
 
     const handleUnfollow = async (restaurantId) => {
-        const token = await checkToken();
+        const token = await checkToken(nav);
         try {
             await authApis(token).post(endpoints["current-user-follow"], {
                 restaurant: restaurantId,

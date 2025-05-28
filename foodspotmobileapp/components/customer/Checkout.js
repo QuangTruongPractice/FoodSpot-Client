@@ -81,12 +81,7 @@ const Checkout = ({ navigation, route }) => {
       return;
     }
     try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        nav.replace("Login");
-        return;
-      }
-      console.info(paymentMethod)
+      const token = await checkToken(nav);
       for (const store of cartData) {
         const orderData = {
           sub_cart_id: store.id,

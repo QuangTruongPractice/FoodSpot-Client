@@ -12,7 +12,7 @@ const OrderInfo = ({ route }) => {
 
     const loadOrderDetails = async () => {
         try {
-            const token = await checkToken();
+            const token = await checkToken(navigation);
             const res = await loadOrderInfo(token, orderId);
             setOrder(res);
         } catch (err) {

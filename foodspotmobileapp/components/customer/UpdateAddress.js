@@ -20,7 +20,7 @@ const UpdateAddress = () => {
   useEffect(() => {
     const fetchAddress = async () => {
       try {
-        const token = await checkToken();
+        const token = await checkToken(navigation);
         const address = await loadAddress(token, addressId);
         setForm({
           addressName: address.name,
@@ -40,7 +40,7 @@ const UpdateAddress = () => {
 
   const onUpdate = async () => {
     try {
-      const token = await checkToken();
+      const token = await checkToken(navigation);
       await authApis(token).put(endpoints["users-address_read"](addressId), {
         name: form.addressName,
         latitude: form.latitude,
@@ -59,7 +59,7 @@ const UpdateAddress = () => {
       [
         { text: "Hủy", style: "cancel" },
         { text: "Xóa", onPress: async () => {
-            const token = await AsyncStorage.getItem("token");
+            const token = await checkToken(navigation);
             if (!token) return;
             await authApis(token).delete(`${endpoints["users-address_read"](addressId)}`);
             navigation.goBack();

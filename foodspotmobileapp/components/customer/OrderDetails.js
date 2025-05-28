@@ -19,10 +19,11 @@ const OrderDetails = ({ route }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingReview, setEditingReview] = useState(null);
     const [editedComment, setEditedComment] = useState("");
+    const nav = useNavigation();
 
     const loadData = async () => {
         try {
-            const token = await checkToken();
+            const token = await checkToken(nav);
             const res = await loadOrderDetails(token, orderDetailId)
             setOrderDetail(res);
             const userRes = await loadUser(token);
@@ -38,7 +39,7 @@ const OrderDetails = ({ route }) => {
     };
 
     const loadReviews = async () => {
-      const token = await checkToken();
+      const token = await checkToken(nav);
       const allReviews = await loadUserReviewFood(token);
       const filteredReviews = allReviews.filter(r => r.order_detail == orderDetailId);
       setReviews(filteredReviews);
@@ -49,7 +50,7 @@ const OrderDetails = ({ route }) => {
           alert("Vui lòng nhập đánh giá và chọn số sao.");
           return;
         }
-        const token = await checkToken();
+        const token = await checkToken(nav);
         const id = await AsyncStorage.getItem("userId");
         const res = await authApis(token).post(endpoints["reviews-food"], {
           comment: comment,
@@ -64,14 +65,14 @@ const OrderDetails = ({ route }) => {
       };
 
     const handleDelete = async (reviewId) => {
-        const token = await checkToken();
+        const token = await checkToken(nav);
         await authApis(token).delete(endpoints["reviews-food-detail"](reviewId));
         console.log("Đang xóa đánh giá", reviewId);
         await loadReviews();
     };
       
     const handleEdit = async (reviewId, editedComment) => {
-        const token = await checkToken();
+        const token = await checkToken(nav);
         await authApis(token).patch(endpoints["reviews-food-detail"](reviewId), {
           comment: editedComment
         });
