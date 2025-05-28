@@ -5,7 +5,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Icon, Button } from "react-native-paper";
 import { getCurrentTimeServe, checkToken, loadRestaurantReviews, loadUser, loadRestaurantDetails, 
-  loadRestaurantMenu, loadRestaurantFood, loadUserFollow
+  loadRestaurantMenu, loadRestaurantFood, loadUserFollow, checkOrdered
  } from "../../configs/Data";
 import styles from "../../styles/RestaurantStyles";
 
@@ -159,15 +159,8 @@ const RestaurantDetails = ({ route }) => {
 
   const hasUserOrderedAtRestaurant = async (token) => {
     try {
-      const ordersRes = await authApis(token).get(endpoints["orders"]);
-      const userOrders = ordersRes.data?.results || [];  // lấy mảng kết quả an toàn
-
-      const hasOrder = userOrders.some(
-        (order) => order.restaurant === restaurantId
-      );
-
-      if (hasOrder) setCanReview(true);
-      
+      const res = await checkOrdered(token, restaurantId);
+      if (res.has_ordered) setCanReview(true);
     } catch (error) {
       console.error("Error checking user orders:", error);
       return false;

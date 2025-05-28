@@ -17,7 +17,7 @@ export function getCurrentTimeServe() {
   if (hour >= 5 && hour < 11) {
     return 'MORNING';
   } else if (hour >= 11 && hour < 13) {
-    return 'NOON';
+    return 'EVENING';
   } else if (hour >= 13 && hour < 23) {
     return 'EVENING';
   } else if (hour >= 23 || hour < 5) {
@@ -152,3 +152,9 @@ export const loadRestaurantFood = async (restaurantId, {foodPage}) => {
   return res.data;
 };
 
+export const checkOrdered = async (token, restaurantId) => {
+  const res = await authApis(token).get(endpoints["check-ordered"],{
+    params: { restaurant_id: restaurantId }
+  });
+  return res.data;
+};

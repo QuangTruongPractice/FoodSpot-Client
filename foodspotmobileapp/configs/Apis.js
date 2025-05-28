@@ -9,6 +9,7 @@ export const endpoints = {
     'orders-info': (orderId) => `/orders/${orderId}/`,
     'orders-detail': (id) => `/order-detail/${id}/`,
     'checkout': '/orders/checkout/',
+    'check-ordered': 'check-ordered',
 
     //payment
     'momo-payment': '/momo-payment/',
