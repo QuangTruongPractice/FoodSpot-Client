@@ -20,7 +20,7 @@ import {
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { endpoints, authApis } from "../../configs/Apis";
+import Apis, { endpoints, authApis } from "../../configs/Apis";
 import { MyUserContext } from "../../configs/MyContexts";
 import Toast from "react-native-toast-message";
 
@@ -35,7 +35,7 @@ const FoodManagement = () => {
   const { restaurantId } = route.params;
   const [user] = useContext(MyUserContext);
 
-  const fetchFoods = async (url = `${endpoints.foods}?restaurant_id=${restaurantId}`) => {
+  const fetchFoods = async (url = endpoints["restaurant-foods"](restaurantId)) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
@@ -49,8 +49,7 @@ const FoodManagement = () => {
         return;
       }
 
-      const authApi = authApis(token);
-      const response = await authApi.get(url);
+      const response = await Apis.get(url);
       const data = Array.isArray(response.data.results) ? response.data.results : [];
       setFoods((prev) => (url.includes("page=") ? [...prev, ...data] : data));
       setNextPage(response.data.next);
