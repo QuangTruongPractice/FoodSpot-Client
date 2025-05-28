@@ -1,4 +1,4 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { MyUserContext, MyDispatchContext } from "./configs/MyContexts";
@@ -22,12 +22,7 @@ import Order from "./components/customer/Order";
 import OrderInfo from "./components/customer/OrderInfo";
 import OrderDetails from "./components/customer/OrderDetails";
 import Profile from "./components/User/Profile";
-import RestaurantHome from "./components/restaurant/RestaurantHome";
-import AddFood from "./components/restaurant/AddFood";
-import ManageRestaurant from "./components/restaurant/ManageRestaurant";
-import ManageOrders from "./components/restaurant/ManageOrders";
-import ManageMenus from "./components/restaurant/ManageMenus"; 
-import FoodManagement from "./components/restaurant/FoodManagement"; 
+import RestaurantNavigation from "./navigation/RestaurantNavigation";
 import { Icon } from "react-native-paper";
 import { PaperProvider } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
@@ -78,28 +73,29 @@ const CartStackNavigator = () => (
   </CartStack.Navigator>
 );
 
-const RestaurantStack = createNativeStackNavigator();
-const RestaurantStackNavigator = () => (
-  <RestaurantStack.Navigator screenOptions={{ headerShown: false }}>
-    <RestaurantStack.Screen name="RestaurantHome" component={RestaurantHome} options={{ title: "Quản lý Nhà hàng" }} />
-    <RestaurantStack.Screen name="FoodManagement" component={FoodManagement} options={{ title: "Quản lý Món ăn" }} /> 
-    <RestaurantStack.Screen name="AddFood" component={AddFood} options={{ title: "Thêm/Chỉnh sửa Món ăn" }} />
-    <RestaurantStack.Screen name="ManageRestaurant" component={ManageRestaurant} options={{ title: "Quản lý thông tin" }} />
-    <RestaurantStack.Screen name="ManageOrders" component={ManageOrders} options={{ title: "Quản lý đơn hàng" }} />
-    <RestaurantStack.Screen name="ManageMenus" component={ManageMenus} options={{ title: "Quản lý menu" }} />
-  </RestaurantStack.Navigator>
-);
-
 const Tab = createBottomTabNavigator();
-const TabNavigator = () => {
+const TabNavigator = ({ navigation }) => {
   const [user] = useContext(MyUserContext);
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === "RESTAURANT_USER") {
+        navigation.navigate("Restaurant", { screen: "RestaurantHome" });
+      } else if (user.role === "customer") {
+        navigation.navigate("Home", { screen: "Home" });
+      }
+    }
+  }, [user, navigation]);
+
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen
-        name="Home"
-        component={StackNavigator}
-        options={{ tabBarIcon: () => <Icon size={30} source="home" /> }}
-      />
+      {user === null || user.role === "customer" ? (
+        <Tab.Screen
+          name="Home"
+          component={StackNavigator}
+          options={{ tabBarIcon: () => <Icon size={30} source="home" /> }}
+        />
+      ) : null}
       {user === null ? (
         <Tab.Screen
           name="Auth"
@@ -112,7 +108,7 @@ const TabNavigator = () => {
             <>
               <Tab.Screen
                 name="Restaurant"
-                component={RestaurantStackNavigator}
+                component={RestaurantNavigation}
                 options={{ tabBarIcon: () => <Icon size={30} source="store" /> }}
               />
               <Tab.Screen
@@ -160,6 +156,7 @@ const SplashScreen = () => (
 const App = () => {
   const [user, dispatch] = useReducer(MyUserReducer, null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -195,8 +192,8 @@ const App = () => {
     <PaperProvider>
       <MyUserContext.Provider value={[user, dispatch]}>
         <MyDispatchContext.Provider value={dispatch}>
-          <NavigationContainer>
-            <TabNavigator />
+          <NavigationContainer ref={navigationRef}>
+            <TabNavigator navigation={navigationRef} />
             <StatusBar style="auto" />
             <Toast />
           </NavigationContainer>

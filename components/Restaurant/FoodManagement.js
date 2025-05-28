@@ -3,10 +3,9 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Alert,
   Image,
-  Platform,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import {
   Card,
@@ -28,6 +27,7 @@ import Toast from "react-native-toast-message";
 const FoodManagement = () => {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [nextPage, setNextPage] = useState(null);
   const navigation = useNavigation();
@@ -40,14 +40,17 @@ const FoodManagement = () => {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
       if (!token || !user || user.role !== "RESTAURANT_USER") {
-        Alert.alert("Lỗi", "Vui lòng đăng nhập lại!");
+        Toast.show({
+          type: "error",
+          text1: "Lỗi",
+          text2: "Vui lòng đăng nhập lại!",
+        });
         navigation.navigate("Auth", { screen: "Login" });
         return;
       }
 
       const authApi = authApis(token);
       const response = await authApi.get(url);
-      console.log("Danh sách món ăn:", JSON.stringify(response.data.results, null, 2));
       const data = Array.isArray(response.data.results) ? response.data.results : [];
       setFoods((prev) => (url.includes("page=") ? [...prev, ...data] : data));
       setNextPage(response.data.next);
@@ -61,10 +64,15 @@ const FoodManagement = () => {
         errorMessage = "Bạn không có quyền xem món ăn của nhà hàng này!";
       }
       console.error("Lỗi tải món ăn:", ex.response?.data || ex.message);
-      Alert.alert("Lỗi", errorMessage);
+      Toast.show({
+        type: "error",
+        text1: "Lỗi",
+        text2: errorMessage,
+      });
       setFoods([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -72,183 +80,83 @@ const FoodManagement = () => {
     fetchFoods();
   }, []);
 
-  const handleDelete = async (foodId) => {
-    Alert.alert(
-      "Xác nhận",
-      "Bạn có chắc muốn xóa món ăn này?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const token = await AsyncStorage.getItem("access_token");
-              const authApi = authApis(token);
-              await authApi.delete(endpoints["food-details"](foodId));
-              setFoods((prev) => prev.filter((food) => food.id !== foodId));
-              Toast.show({
-                type: "success",
-                text1: "Thành công",
-                text2: "Món ăn đã được xóa!",
-              });
-            } catch (ex) {
-              let errorMessage = ex.message || "Không thể xóa món ăn!";
-              if (ex.response?.status === 401) {
-                errorMessage = "Phiên đăng nhập hết hạn!";
-                await AsyncStorage.removeItem("access_token");
-                navigation.navigate("Auth", { screen: "Login" });
-              } else if (ex.response?.status === 403) {
-                errorMessage = "Bạn không có quyền xóa món ăn này!";
-              }
-              console.error("Lỗi xóa món ăn:", ex.response?.data || ex.message);
-              Toast.show({
-                type: "error",
-                text1: "Lỗi",
-                text2: errorMessage,
-              });
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const handleToggleAvailability = async (foodId, currentStatus) => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("access_token");
-      const authApi = authApis(token);
-      console.log(`Cập nhật is_available cho món ${foodId}: ${!currentStatus}`);
-      const response = await authApi.patch(endpoints["food-details"](foodId), {
-        is_available: !currentStatus,
-      });
-      console.log("Phản hồi API:", response.data);
-      setFoods((prev) =>
-        prev.map((food) =>
-          food.id === foodId
-            ? { ...food, is_available: response.data.is_available }
-            : food
-        )
-      );
-      Toast.show({
-        type: "success",
-        text1: "Thành công",
-        text2: `Món ăn đã được ${response.data.is_available ? "kích hoạt" : "tạm ẩn"}!`,
-      });
-    } catch (ex) {
-      let errorMessage = ex.message || "Không thể cập nhật trạng thái!";
-      if (ex.response?.status === 401) {
-        errorMessage = "Phiên đăng nhập hết hạn!";
-        await AsyncStorage.removeItem("access_token");
-        navigation.navigate("Auth", { screen: "Login" });
-      } else if (ex.response?.status === 403) {
-        errorMessage = "Bạn không có quyền cập nhật món ăn này!";
-      }
-      console.error("Lỗi cập nhật is_available:", ex.response?.data || ex.message);
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: errorMessage,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (food) => {
-    console.log("Chỉnh sửa món:", food);
-    navigation.navigate("AddFood", {
-      restaurantId,
-      foodData: {
-        id: food.id,
-        name: food.name,
-        description: food.description,
-        categoryId: food.food_category.toString(),
-        prices: food.prices,
-        image: food.image,
-        is_available: food.is_available,
-      },
-    });
+  const onRefresh = () => {
+    setRefreshing(true);
+    setFoods([]);
+    fetchFoods();
   };
 
   const filteredFoods = foods.filter((food) =>
     food.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderFoodItem = ({ item }) => {
-    console.log(`Món ${item.name}: is_available=${item.is_available}, image=${item.image}`);
-    return (
-      <Card style={styles.card}>
-        <Card.Content style={styles.cardContent}>
-          {item.image ? (
-            <Image
-              source={{ uri: item.image, cache: "reload" }}
-              style={styles.foodImage}
-              resizeMode="cover"
-              defaultSource={require("../../assets/splash-icon.png")}
-              key={item.image}
-              onError={(e) => console.log(`Lỗi tải ảnh ${item.name}:`, e.nativeEvent.error)}
-            />
-          ) : (
-            <View style={[styles.foodImage, styles.noImage]}>
-              <Paragraph>Không có ảnh</Paragraph>
-            </View>
-          )}
-          <View style={styles.foodInfo}>
-            <Title style={styles.foodName}>{item.name}</Title>
-            <Paragraph style={styles.foodDetail}>
-              Danh mục: {item.food_category_name || "Chưa xác định"}
-            </Paragraph>
-            {item.prices.map((price, index) => (
-              <Paragraph key={index} style={styles.foodDetail}>
-                Giá ({price.time_serve}): {price.price.toLocaleString("vi-VN")} VNĐ
-              </Paragraph>
-            ))}
-            <Chip
-              style={[
-                styles.statusChip,
-                { backgroundColor: item.is_available ? "#e6ffed" : "#ffe6e6" },
-              ]}
-              textStyle={{ color: item.is_available ? "#2e7d32" : "#d32f2f" }}
-            >
-              {item.is_available ? "Có sẵn" : "Tạm ẩn"}
-            </Chip>
+  const renderFoodItem = ({ item }) => (
+    <Card style={styles.card}>
+      <Card.Content style={styles.cardContent}>
+        {item.image ? (
+          <Image
+            source={{ uri: item.image, cache: "reload" }}
+            style={styles.foodImage}
+            resizeMode="cover"
+            onError={(e) => console.log(`Lỗi tải ảnh ${item.name}:`, e.nativeEvent.error)}
+          />
+        ) : (
+          <View style={[styles.foodImage, styles.noImage]}>
+            <Paragraph style={styles.noImageText}>Không có ảnh</Paragraph>
           </View>
-        </Card.Content>
-        <Card.Actions style={styles.cardActions}>
-          <Button
-            mode="outlined"
-            onPress={() => handleEdit(item)}
-            style={styles.actionButton}
-            labelStyle={styles.actionButtonLabel}
+        )}
+        <View style={styles.foodInfo}>
+          <Title style={styles.foodName}>{item.name}</Title>
+          <Paragraph style={styles.foodDetail}>
+            Danh mục: {item.food_category_name || "Chưa xác định"}
+          </Paragraph>
+          {item.prices.map((price, index) => (
+            <Paragraph key={index} style={styles.foodDetail}>
+              Giá ({price.time_serve}): {price.price.toLocaleString("vi-VN")} VNĐ
+            </Paragraph>
+          ))}
+          <Paragraph style={styles.foodDetail}>
+            Đánh giá: {item.star_rating ? item.star_rating.toFixed(2) : "Chưa có"}
+          </Paragraph>
+          <Chip
+            style={[
+              styles.statusChip,
+              { backgroundColor: item.is_available ? "#e6ffed" : "#ffe6e6" },
+            ]}
+            textStyle={{ color: item.is_available ? "#2e7d32" : "#d32f2f" }}
           >
-            Sửa
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => handleDelete(item.id)}
-            style={styles.actionButton}
-            labelStyle={[styles.actionButtonLabel, { color: "#d32f2f" }]}
-          >
-            Xóa
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => handleToggleAvailability(item.id, item.is_available)}
-            style={styles.actionButton}
-            labelStyle={styles.actionButtonLabel}
-          >
-            {item.is_available ? "Tạm ẩn" : "Kích hoạt"}
-          </Button>
-        </Card.Actions>
-      </Card>
-    );
-  };
+            {item.is_available ? "Có sẵn" : "Tạm ẩn"}
+          </Chip>
+        </View>
+      </Card.Content>
+      <Card.Actions style={styles.cardActions}>
+        <Button
+          mode="outlined"
+          onPress={() => navigation.navigate("EditFood", { restaurantId, food: item })}
+          style={styles.actionButton}
+          labelStyle={styles.actionButtonLabel}
+        >
+          Sửa
+        </Button>
+        <Button
+          mode="outlined"
+          onPress={() => navigation.navigate("DeleteFood", { foodId: item.id })}
+          style={styles.actionButton}
+          labelStyle={[styles.actionButtonLabel, { color: "#d32f2f" }]}
+        >
+          Xóa
+        </Button>
+        <Button
+          mode="contained"
+          onPress={() => navigation.navigate("ToggleAvailability", { foodId: item.id, currentStatus: item.is_available })}
+          style={[styles.actionButton, { backgroundColor: item.is_available ? "#d32f2f" : "#2e7d32" }]}
+          labelStyle={styles.actionButtonLabel}
+        >
+          {item.is_available ? "Tạm ẩn" : "Kích hoạt"}
+        </Button>
+      </Card.Actions>
+    </Card>
+  );
 
   return (
     <View style={styles.container}>
@@ -260,8 +168,9 @@ const FoodManagement = () => {
           style={styles.addButton}
           contentStyle={styles.buttonContent}
           labelStyle={styles.buttonLabel}
+          icon="plus"
         >
-          Thêm món ăn
+          Thêm món
         </Button>
       </View>
       <TextInput
@@ -270,7 +179,7 @@ const FoodManagement = () => {
         onChangeText={setSearchQuery}
         style={styles.searchInput}
         mode="outlined"
-        theme={{ roundness: 8 }}
+        theme={{ roundness: 10 }}
         dense
         left={<TextInput.Icon icon="magnify" />}
       />
@@ -279,6 +188,9 @@ const FoodManagement = () => {
         renderItem={renderFoodItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         ListEmptyComponent={
           <Paragraph style={styles.emptyText}>
             Không tìm thấy món ăn nào.
@@ -290,6 +202,7 @@ const FoodManagement = () => {
               mode="outlined"
               onPress={() => fetchFoods(nextPage)}
               style={styles.loadMoreButton}
+              labelStyle={styles.loadMoreLabel}
             >
               Tải thêm
             </Button>
@@ -306,6 +219,7 @@ const FoodManagement = () => {
           <Title style={styles.modalText}>Đang xử lý...</Title>
         </Modal>
       </Portal>
+      <Toast />
     </View>
   );
 };
@@ -314,12 +228,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+    paddingTop: 10,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   title: {
     fontSize: 28,
@@ -327,44 +243,54 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   addButton: {
-    borderRadius: 8,
+    borderRadius: 10,
+    backgroundColor: "#6200ee",
   },
   buttonContent: {
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   buttonLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
+    color: "#fff",
   },
   searchInput: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginVertical: 12,
     backgroundColor: "#fff",
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 20,
   },
   card: {
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: "#fff",
-    borderRadius: 8,
-    elevation: 2,
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cardContent: {
     flexDirection: "row",
-    padding: 16,
+    padding: 12,
   },
   foodImage: {
     width: 100,
     height: 100,
     borderRadius: 8,
-    marginRight: 16,
+    marginRight: 12,
   },
   noImage: {
-    backgroundColor: "#eee",
+    backgroundColor: "#e0e0e0",
     justifyContent: "center",
     alignItems: "center",
+  },
+  noImageText: {
+    color: "#666",
+    fontSize: 14,
   },
   foodInfo: {
     flex: 1,
@@ -383,6 +309,7 @@ const styles = StyleSheet.create({
   statusChip: {
     marginTop: 8,
     alignSelf: "flex-start",
+    paddingVertical: 2,
   },
   cardActions: {
     justifyContent: "flex-end",
@@ -391,6 +318,7 @@ const styles = StyleSheet.create({
   actionButton: {
     marginLeft: 8,
     borderRadius: 6,
+    borderColor: "#6200ee",
   },
   actionButtonLabel: {
     fontSize: 14,
@@ -400,21 +328,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     color: "#888",
-    marginTop: 32,
+    marginTop: 20,
   },
   loadMoreButton: {
-    marginVertical: 16,
+    marginVertical: 12,
     alignSelf: "center",
+    borderColor: "#6200ee",
+  },
+  loadMoreLabel: {
+    fontSize: 14,
+    color: "#6200ee",
   },
   modal: {
     backgroundColor: "#fff",
-    padding: 24,
+    padding: 20,
     margin: 32,
     borderRadius: 12,
     alignItems: "center",
   },
   modalText: {
-    marginTop: 16,
+    marginTop: 12,
     fontSize: 16,
     color: "#333",
   },

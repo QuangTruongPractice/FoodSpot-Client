@@ -51,16 +51,6 @@ const Login = () => {
           type: "login",
           payload: userRes.data,
         });
-
-        // Điều hướng dựa trên vai trò
-        const userRole = userRes.data.role;
-        if (userRole === "customer") {
-          nav.navigate("Home", { screen: "Home" });
-        } else if (userRole === "RESTAURANT_USER") {
-          nav.navigate("Restaurant", { screen: "RestaurantHome" });
-        } else {
-          setMsg("Vai trò không hợp lệ!");
-        }
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(
