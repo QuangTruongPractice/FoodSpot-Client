@@ -20,7 +20,7 @@ import {
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import Apis, { endpoints, authApis } from "../../configs/Apis";
+import { endpoints, authApis } from "../../configs/Apis";
 import { MyUserContext } from "../../configs/MyContexts";
 import Toast from "react-native-toast-message";
 
@@ -32,13 +32,39 @@ const FoodManagement = () => {
   const [nextPage, setNextPage] = useState(null);
   const navigation = useNavigation();
   const route = useRoute();
-  const { restaurantId } = route.params;
+  
+  // Debug để xem structure của params
+  console.log("🔍 Full route params:", JSON.stringify(route.params, null, 2));
+  
+  const restaurantId = route.params?.restaurantId;
   const [user] = useContext(MyUserContext);
 
-  const fetchFoods = async (url = endpoints["restaurant-foods"](restaurantId)) => {
+  console.log("🏪 Restaurant ID:", restaurantId);
+  
+  // Kiểm tra nếu không có restaurantId
+  if (!restaurantId) {
+    console.error("❌ Restaurant ID không tồn tại!");
+    Toast.show({
+      type: "error",
+      text1: "Lỗi",
+      text2: "Không tìm thấy ID nhà hàng!",
+    });
+    return null;
+  }
+
+  const fetchFoods = async (url) => {
+    // Nếu không có url, tạo URL mới theo format đúng
+    if (!url) {
+      url = `/restaurants/${restaurantId}/foods/`;
+    }
+    
+    console.log("🔍 Đang gọi URL:", url);
+    console.log("🏪 Restaurant ID:", restaurantId);
+    console.log("👤 User:", user);
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
+      console.log("🔑 Token exists:", !!token);
       if (!token || !user || user.role !== "RESTAURANT_USER") {
         Toast.show({
           type: "error",
@@ -49,10 +75,31 @@ const FoodManagement = () => {
         return;
       }
 
-      const response = await Apis.get(url);
-      const data = Array.isArray(response.data.results) ? response.data.results : [];
+      const authApi = authApis(token);
+      console.log("📡 Gọi API với URL:", url);
+      const response = await authApi.get(url);
+      console.log("📥 Response status:", response.status);
+      console.log("📦 Response data:", JSON.stringify(response.data, null, 2));
+      
+      // SỬA CHÍNH TẠI ĐÂY - Xử lý response data đúng cách
+      let data = [];
+      if (Array.isArray(response.data)) {
+        // Nếu response.data là array trực tiếp
+        data = response.data;
+        setNextPage(null); // Không có pagination
+      } else if (response.data.results && Array.isArray(response.data.results)) {
+        // Nếu có pagination với results
+        data = response.data.results;
+        setNextPage(response.data.next);
+      } else {
+        // Fallback
+        data = [];
+      }
+      
+      console.log("🍽️ Số món ăn nhận được:", data.length);
+      console.log("🔍 Chi tiết món ăn:", data.map(food => ({ id: food.id, name: food.name, available: food.is_available })));
+      
       setFoods((prev) => (url.includes("page=") ? [...prev, ...data] : data));
-      setNextPage(response.data.next);
     } catch (ex) {
       let errorMessage = ex.message || "Không thể tải danh sách món ăn!";
       if (ex.response?.status === 401) {
@@ -76,18 +123,24 @@ const FoodManagement = () => {
   };
 
   useEffect(() => {
-    fetchFoods();
-  }, []);
+    console.log("🚀 Component mounted, fetching foods...");
+    if (restaurantId) {
+      fetchFoods(`/restaurants/${restaurantId}/foods/`);
+    }
+  }, [restaurantId]);
 
   const onRefresh = () => {
     setRefreshing(true);
     setFoods([]);
-    fetchFoods();
+    fetchFoods(`/restaurants/${restaurantId}/foods/`);
   };
 
   const filteredFoods = foods.filter((food) =>
     food.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  console.log("🔍 Current foods state:", foods.length);
+  console.log("🔍 Filtered foods:", filteredFoods.length);
 
   const renderFoodItem = ({ item }) => (
     <Card style={styles.card}>
@@ -109,11 +162,18 @@ const FoodManagement = () => {
           <Paragraph style={styles.foodDetail}>
             Danh mục: {item.food_category_name || "Chưa xác định"}
           </Paragraph>
-          {item.prices.map((price, index) => (
-            <Paragraph key={index} style={styles.foodDetail}>
-              Giá ({price.time_serve}): {price.price.toLocaleString("vi-VN")} VNĐ
-            </Paragraph>
-          ))}
+          {item.prices && item.prices.length > 0 ? (
+            item.prices.map((price, index) => (
+              <Paragraph key={index} style={styles.foodDetail}>
+                Giá ({price.time_serve}): {price.price.toLocaleString("vi-VN")} VNĐ
+              </Paragraph>
+            ))
+          ) : (
+            <Paragraph style={styles.foodDetail}>Chưa có giá</Paragraph>
+          )}
+          <Paragraph style={styles.foodDetail}>
+            Mô tả: {item.description || "Chưa có mô tả"}
+          </Paragraph>
           <Paragraph style={styles.foodDetail}>
             Đánh giá: {item.star_rating ? item.star_rating.toFixed(2) : "Chưa có"}
           </Paragraph>
@@ -182,42 +242,51 @@ const FoodManagement = () => {
         dense
         left={<TextInput.Icon icon="magnify" />}
       />
-      <FlatList
-        data={filteredFoods}
-        renderItem={renderFoodItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <Paragraph style={styles.emptyText}>
-            Không tìm thấy món ăn nào.
-          </Paragraph>
-        }
-        ListFooterComponent={
-          nextPage && !loading ? (
-            <Button
-              mode="outlined"
-              onPress={() => fetchFoods(nextPage)}
-              style={styles.loadMoreButton}
-              labelStyle={styles.loadMoreLabel}
-            >
-              Tải thêm
-            </Button>
-          ) : null
-        }
-      />
-      <Portal>
-        <Modal
-          visible={loading}
-          dismissable={false}
-          contentContainerStyle={styles.modal}
-        >
+      {loading && foods.length === 0 ? (
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6200ee" />
-          <Title style={styles.modalText}>Đang xử lý...</Title>
-        </Modal>
-      </Portal>
+          <Title style={styles.loadingText}>Đang tải món ăn...</Title>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredFoods}
+          renderItem={renderFoodItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Paragraph style={styles.emptyText}>
+                {searchQuery ? "Không tìm thấy món ăn phù hợp" : "Chưa có món ăn nào"}
+              </Paragraph>
+              {!searchQuery && (
+                <Button
+                  mode="contained"
+                  onPress={() => navigation.navigate("AddFood", { restaurantId })}
+                  style={styles.emptyButton}
+                  icon="plus"
+                >
+                  Thêm món đầu tiên
+                </Button>
+              )}
+            </View>
+          }
+          ListFooterComponent={
+            nextPage && !loading ? (
+              <Button
+                mode="outlined"
+                onPress={() => fetchFoods(nextPage)}
+                style={styles.loadMoreButton}
+                labelStyle={styles.loadMoreLabel}
+              >
+                Tải thêm
+              </Button>
+            ) : null
+          }
+        />
+      )}
       <Toast />
     </View>
   );
@@ -257,6 +326,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 12,
     backgroundColor: "#fff",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#333",
   },
   listContent: {
     paddingHorizontal: 16,
@@ -323,11 +402,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 40,
+  },
   emptyText: {
     textAlign: "center",
     fontSize: 16,
     color: "#888",
-    marginTop: 20,
+    marginBottom: 20,
+  },
+  emptyButton: {
+    backgroundColor: "#6200ee",
+    borderRadius: 10,
   },
   loadMoreButton: {
     marginVertical: 12,
@@ -337,18 +424,6 @@ const styles = StyleSheet.create({
   loadMoreLabel: {
     fontSize: 14,
     color: "#6200ee",
-  },
-  modal: {
-    backgroundColor: "#fff",
-    padding: 20,
-    margin: 32,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  modalText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#333",
   },
 });
 

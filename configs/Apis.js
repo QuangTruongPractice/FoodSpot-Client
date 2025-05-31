@@ -1,7 +1,7 @@
 import axios from "axios"
 import qs from "qs"
 
-const BASE_URL = "http://192.168.1.37:8000/"
+const BASE_URL = "http://192.168.1.138:8000/"
 
 export const endpoints = {
   //order
@@ -17,7 +17,7 @@ export const endpoints = {
   "foods": "/foods/",
   "food-details": (foodId) => `/foods/${foodId}/`,
   "food-reviews": (foodId) => `/foods/${foodId}/reviews/`,
-  
+  "food-add-price": (foodId) => `/foods/${foodId}/add_price/`,
   //favorite
   "favorite": "/favorite/",
   "favorite-details": (id) => `/favorite/${id}/`,

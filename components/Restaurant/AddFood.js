@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useContext } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Image, TouchableOpacity, Modal, FlatList, Switch } from "react-native";
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  StyleSheet, 
+  Alert, 
+  ScrollView, 
+  Switch,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+  Image
+} from "react-native";
 import { MyUserContext } from "../../configs/MyContexts";
 import APis, { authApis, endpoints } from "../../configs/Apis";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
+import * as ImagePicker from 'expo-image-picker';
+import Toast from "react-native-toast-message";
 
 const AddFood = ({ navigation, route }) => {
   const [user] = useContext(MyUserContext);
@@ -12,30 +25,35 @@ const AddFood = ({ navigation, route }) => {
     name: "",
     description: "",
     food_category: "",
-    prices: [{ time_serve: "MORNING", price: "" }],
-    image: null,
-    is_available: true, // Thêm trường trạng thái món ăn
+    is_available: true,
+    image: null
   });
+  
+  // State cho nhiều giá
+  const [prices, setPrices] = useState([
+    { time_serve: "NOON", price: "", id: Date.now() }
+  ]);
+  
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Danh sách thời gian phục vụ có sẵn
   const timeServeOptions = [
     { key: "MORNING", label: "Sáng" },
-    { key: "AFTERNOON", label: "Chiều" },
-    { key: "EVENING", label: "Tối" },
-    { key: "ALL_DAY", label: "Cả ngày" }
+    { key: "NOON", label: "Trưa" },
+    { key: "EVENING", label: "Chiều" },
+    { key: "NIGHT", label: "Tối" },
   ];
 
-  // Lấy danh sách danh mục từ API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
         const token = await AsyncStorage.getItem("access_token");
-        const response = await APis.get(endpoints["foods-category"]);
-        const data = Array.isArray(response.data.results) ? response.data.results : [];
+        const response = await APis.get(endpoints["foods-category"], {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = Array.isArray(response.data.results) ? response.data.results : response.data;
         setCategories(data);
       } catch (error) {
         Alert.alert("Lỗi", "Không thể tải danh sách danh mục!");
@@ -47,138 +65,288 @@ const AddFood = ({ navigation, route }) => {
     fetchCategories();
   }, []);
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Lỗi", "Vui lòng cấp quyền truy cập thư viện ảnh!");
+  // Hàm chọn ảnh từ thư viện
+  const picker = async () => {
+    let { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      Toast.show({
+        type: "error",
+        text1: "Lỗi",
+        text2: "Quyền truy cập thư viện ảnh bị từ chối!"
+      });
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaType: "photo",
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      aspect: [4, 3],
+      quality: 0.8
     });
 
     if (!result.canceled) {
-      setFoodData({ ...foodData, image: result.assets[0].uri });
-    }
-  };
-
-  const addPriceField = () => {
-    setFoodData({
-      ...foodData,
-      prices: [...foodData.prices, { time_serve: "MORNING", price: "" }],
-    });
-  };
-
-  const updatePriceField = (index, field, value) => {
-    const newPrices = [...foodData.prices];
-    if (field === "price") {
-      // Chỉ cho phép nhập số và dấu chấm
-      const numericValue = value.replace(/[^0-9.]/g, '');
-      newPrices[index][field] = numericValue;
-    } else {
-      newPrices[index][field] = value;
-    }
-    setFoodData({ ...foodData, prices: newPrices });
-  };
-
-  const removePriceField = (index) => {
-    if (foodData.prices.length > 1) {
-      const newPrices = foodData.prices.filter((_, i) => i !== index);
-      setFoodData({ ...foodData, prices: newPrices });
-    }
-  };
-
-  // Kiểm tra trùng lặp thời gian phục vụ
-  const validatePrices = () => {
-    const timeServes = foodData.prices.map(p => p.time_serve);
-    const uniqueTimeServes = new Set(timeServes);
-    return timeServes.length === uniqueTimeServes.size;
-  };
-
-  const handleAddFood = async () => {
-    // Kiểm tra các trường bắt buộc
-    if (!foodData.name || !foodData.food_category) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ Tên món ăn và Danh mục!");
-      return;
-    }
-
-    // Lọc các giá hợp lệ (có cả time_serve và price)
-    const validPrices = foodData.prices.filter(p => p.time_serve && p.price && parseFloat(p.price) > 0);
-    
-    if (validPrices.length === 0) {
-      Alert.alert("Lỗi", "Vui lòng thêm ít nhất một mức giá hợp lệ!");
-      return;
-    }
-
-    // Kiểm tra trùng lặp thời gian phục vụ
-    if (!validatePrices()) {
-      Alert.alert("Lỗi", "Không được trùng lặp thời gian phục vụ!");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const authApi = authApis(token);
-      const formData = new FormData();
-      
-      formData.append("name", foodData.name);
-      formData.append("description", foodData.description);
-      formData.append("food_category", foodData.food_category);
-      formData.append("restaurant", restaurantId);
-      formData.append("is_available", foodData.is_available);
-      
-      // Chuyển đổi giá thành số và định dạng lại
-      const formattedPrices = validPrices.map(p => ({
-        time_serve: p.time_serve,
-        price: parseFloat(p.price)
-      }));
-      
-      formData.append("prices", JSON.stringify(formattedPrices));
-
-      if (foodData.image) {
-        formData.append("image", {
-          uri: foodData.image,
-          type: "image/jpeg",
-          name: "food_image.jpg",
-        });
-      }
-
-      const res = await authApi.post(endpoints["foods"], formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      updateField("image", result.assets[0]);
+      Toast.show({
+        type: "success",
+        text1: "Thành công",
+        text2: "Đã chọn ảnh món ăn!"
       });
-      
-      Alert.alert("Thành công", "Thêm món ăn thành công!");
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể thêm món ăn! Vui lòng kiểm tra lại.");
-      console.error("Lỗi thêm món ăn:", error.response?.data || error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Tìm tên danh mục được chọn
+  const updateField = (field, value) => {
+    setFoodData({ ...foodData, [field]: value });
+  };
+
+  // Cập nhật giá theo thời gian phục vụ
+  const updatePrice = (id, field, value) => {
+    if (field === "price") {
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setPrices(prices.map(price => 
+        price.id === id ? { ...price, [field]: numericValue } : price
+      ));
+    } else {
+      setPrices(prices.map(price => 
+        price.id === id ? { ...price, [field]: value } : price
+      ));
+    }
+  };
+
+  // Thêm khung giá mới
+  const addPriceSlot = () => {
+    const newPrice = {
+      time_serve: "NOON",
+      price: "",
+      id: Date.now()
+    };
+    setPrices([...prices, newPrice]);
+  };
+
+  // Xóa khung giá
+  const removePriceSlot = (id) => {
+    if (prices.length === 1) {
+      Alert.alert("Thông báo", "Phải có ít nhất một mức giá!");
+      return;
+    }
+    setPrices(prices.filter(price => price.id !== id));
+  };
+
+  // Kiểm tra xem thời gian phục vụ đã được chọn chưa
+  const isTimeServeUsed = (timeServe, currentId) => {
+    return prices.some(price => price.time_serve === timeServe && price.id !== currentId);
+  };
+
   const getSelectedCategoryName = () => {
     if (!foodData.food_category) return "Chọn danh mục";
     const selectedCategory = categories.find(cat => cat.id.toString() === foodData.food_category);
     return selectedCategory ? selectedCategory.name : "Chọn danh mục";
   };
 
-  // Xử lý chọn danh mục
-  const handleSelectCategory = (categoryId, categoryName) => {
+  const handleSelectCategory = (categoryId) => {
     setFoodData({ ...foodData, food_category: categoryId.toString() });
     setShowCategoryModal(false);
   };
 
-  // Lấy label cho thời gian phục vụ
-  const getTimeServeLabel = (timeServe) => {
-    const option = timeServeOptions.find(opt => opt.key === timeServe);
-    return option ? option.label : timeServe;
+  const validatePrices = () => {
+    // Kiểm tra tất cả các giá đã được nhập
+    for (let price of prices) {
+      if (!price.price || parseInt(price.price) <= 0) {
+        return false;
+      }
+    }
+
+    // Kiểm tra không có thời gian phục vụ trùng lặp
+    const timeServes = prices.map(p => p.time_serve);
+    const uniqueTimeServes = [...new Set(timeServes)];
+    if (timeServes.length !== uniqueTimeServes.length) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleAddFood = async () => {
+    // Validation
+    if (!foodData.name) {
+      Alert.alert("Lỗi", "Vui lòng điền tên món ăn!");
+      return;
+    }
+    if (!foodData.food_category) {
+      Alert.alert("Lỗi", "Vui lòng chọn danh mục!");
+      return;
+    }
+    if (!validatePrices()) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ giá hợp lệ và không trùng thời gian phục vụ!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      
+      // Bước 1: Tạo món ăn mới với FormData để gửi kèm ảnh
+      let form = new FormData();
+      form.append("name", foodData.name);
+      form.append("description", foodData.description || "");
+      form.append("food_category", parseInt(foodData.food_category));
+      form.append("restaurant", parseInt(restaurantId));
+      form.append("is_available", foodData.is_available);
+
+      // Thêm ảnh nếu có
+      if (foodData.image) {
+        form.append("image", {
+          uri: foodData.image.uri,
+          name: foodData.image.fileName || "food_image.jpg",
+          type: foodData.image.type || "image/jpeg"
+        });
+      }
+
+      console.log("Creating food with FormData");
+
+      // Tạo món ăn mới với ảnh
+      const createFoodResponse = await authApis(token).post(
+        endpoints["foods"],
+        form,
+        {
+          headers: { 
+            "Content-Type": "multipart/form-data" 
+          },
+        }
+      );
+
+      const newFoodId = createFoodResponse.data.id;
+      console.log("Created food with ID:", newFoodId);
+
+      // Bước 2: Thêm tất cả các giá cho món ăn vừa tạo
+      const pricePromises = prices.map(priceItem => {
+        const pricePayload = {
+          time_serve: priceItem.time_serve,
+          price: parseInt(priceItem.price),
+        };
+
+        console.log("Adding price with payload:", pricePayload);
+
+        return authApis(token).post(
+          endpoints["food-add-price"](newFoodId),
+          pricePayload,
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      });
+
+      // Chờ tất cả các request thêm giá hoàn thành
+      await Promise.all(pricePromises);
+
+      Toast.show({
+        type: "success",
+        text1: "Thành công",
+        text2: `Thêm món ăn với ${prices.length} mức giá thành công!`
+      });
+      navigation.goBack();
+      
+    } catch (error) {
+      let errorMessage = "Không thể thêm món ăn! Vui lòng kiểm tra lại.";
+      
+      if (error.response?.data) {
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.details) {
+          if (typeof error.response.data.details === "object") {
+            const details = Object.entries(error.response.data.details).map(
+              ([key, value]) => {
+                if (Array.isArray(value)) {
+                  return `${key}: ${value.join("; ")}`;
+                }
+                return `${key}: ${value}`;
+              }
+            );
+            errorMessage = details.join("; ");
+          } else {
+            errorMessage = error.response.data.details;
+          }
+        } else {
+          const errors = Object.entries(error.response.data).map(([key, value]) => {
+            if (Array.isArray(value)) {
+              return `${key}: ${value.join(", ")}`;
+            }
+            return `${key}: ${value}`;
+          });
+          errorMessage = errors.join("; ");
+        }
+      } else if (error.code === "ECONNABORTED") {
+        errorMessage = "Yêu cầu hết thời gian. Vui lòng kiểm tra kết nối mạng.";
+      }
+      
+      Alert.alert("Lỗi", errorMessage);
+      Toast.show({
+        type: "error",
+        text1: "Lỗi",
+        text2: errorMessage
+      });
+      console.error("Lỗi thêm món ăn:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderPriceSlot = (priceItem, index) => {
+    return (
+      <View key={priceItem.id} style={styles.priceSlotContainer}>
+        <View style={styles.priceSlotHeader}>
+          <Text style={styles.priceSlotTitle}>Giá #{index + 1}</Text>
+          {prices.length > 1 && (
+            <TouchableOpacity 
+              style={styles.removePriceButton}
+              onPress={() => removePriceSlot(priceItem.id)}
+              disabled={loading}
+            >
+              <Text style={styles.removePriceButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <Text style={styles.label}>Thời gian phục vụ *</Text>
+        <View style={styles.timeServeButtons}>
+          {timeServeOptions.map((option) => {
+            const isUsed = isTimeServeUsed(option.key, priceItem.id);
+            const isSelected = priceItem.time_serve === option.key;
+            
+            return (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.timeServeButton,
+                  isSelected && styles.selectedTimeServe,
+                  isUsed && !isSelected && styles.disabledTimeServe
+                ]}
+                onPress={() => updatePrice(priceItem.id, "time_serve", option.key)}
+                disabled={loading || (isUsed && !isSelected)}
+              >
+                <Text style={[
+                  styles.timeServeButtonText,
+                  isSelected && styles.selectedTimeServeText,
+                  isUsed && !isSelected && styles.disabledTimeServeText
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        
+        <Text style={styles.label}>Giá (VNĐ) *</Text>
+        <TextInput
+          style={styles.priceInput}
+          placeholder="0"
+          value={priceItem.price}
+          onChangeText={(text) => updatePrice(priceItem.id, "price", text)}
+          keyboardType="numeric"
+          editable={!loading}
+        />
+      </View>
+    );
   };
 
   return (
@@ -190,7 +358,8 @@ const AddFood = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Nhập tên món ăn"
         value={foodData.name}
-        onChangeText={(text) => setFoodData({ ...foodData, name: text })}
+        onChangeText={(text) => updateField("name", text)}
+        editable={!loading}
       />
       
       <Text style={styles.label}>Mô tả</Text>
@@ -198,11 +367,12 @@ const AddFood = ({ navigation, route }) => {
         style={[styles.input, styles.descriptionInput]}
         placeholder="Nhập mô tả món ăn"
         value={foodData.description}
-        onChangeText={(text) => setFoodData({ ...foodData, description: text })}
+        onChangeText={(text) => updateField("description", text)}
         multiline
+        editable={!loading}
       />
       
-      <Text style={styles.sectionTitle}>Danh mục món ăn *</Text>
+      <Text style={styles.label}>Danh mục món ăn *</Text>
       <TouchableOpacity 
         style={styles.categorySelector}
         onPress={() => setShowCategoryModal(true)}
@@ -217,100 +387,66 @@ const AddFood = ({ navigation, route }) => {
         <Text style={styles.dropdownArrow}>▼</Text>
       </TouchableOpacity>
 
-      {/* Trạng thái món ăn */}
+      {/* Phần chọn ảnh món ăn */}
+      <Text style={styles.label}>Ảnh món ăn</Text>
+      <TouchableOpacity 
+        style={styles.imagePickerButton} 
+        onPress={picker} 
+        disabled={loading}
+      >
+        <Text style={[styles.imagePickerText, loading && styles.disabledText]}>
+          {foodData.image ? "Thay đổi ảnh món ăn..." : "Chọn ảnh món ăn..."}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Hiển thị ảnh đã chọn */}
+      {foodData.image && (
+        <View style={styles.imagePreviewContainer}>
+          <Image
+            style={styles.imagePreview}
+            source={{ uri: foodData.image.uri }}
+          />
+          <TouchableOpacity 
+            style={styles.removeImageButton}
+            onPress={() => updateField("image", null)}
+            disabled={loading}
+          >
+            <Text style={styles.removeImageText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.availabilityContainer}>
-        <Text style={styles.sectionTitle}>Trạng thái món ăn</Text>
+        <Text style={styles.label}>Trạng thái món ăn</Text>
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>
             {foodData.is_available ? "Có sẵn" : "Hết hàng"}
           </Text>
           <Switch
             value={foodData.is_available}
-            onValueChange={(value) => setFoodData({ ...foodData, is_available: value })}
+            onValueChange={(value) => updateField("is_available", value)}
             trackColor={{ false: "#ccc", true: "#6200ee" }}
             thumbColor={foodData.is_available ? "#fff" : "#f4f3f4"}
+            disabled={loading}
           />
         </View>
       </View>
-      
-      <Text style={styles.sectionTitle}>Chọn ảnh món ăn</Text>
-      <TouchableOpacity 
-        style={styles.imageButton} 
-        onPress={pickImage}
-        disabled={loading}
-      >
-        <Text style={styles.imageButtonText}>
-          {foodData.image ? "Thay đổi ảnh" : "Chọn ảnh món ăn"}
-        </Text>
-      </TouchableOpacity>
-      
-      {foodData.image && (
-        <Image source={{ uri: foodData.image }} style={styles.previewImage} />
-      )}
-      
-      <Text style={styles.sectionTitle}>Giá món ăn *</Text>
-      <Text style={styles.helperText}>Thêm giá cho các thời gian phục vụ khác nhau</Text>
-      
-      {foodData.prices.map((price, index) => (
-        <View key={index} style={styles.priceContainer}>
-          <View style={styles.priceHeader}>
-            <Text style={styles.priceLabel}>Giá #{index + 1}</Text>
-            {foodData.prices.length > 1 && (
-              <TouchableOpacity 
-                style={styles.removeButton}
-                onPress={() => removePriceField(index)}
-              >
-                <Text style={styles.removeButtonText}>Xóa</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          <View style={styles.priceInputContainer}>
-            {/* Dropdown cho thời gian phục vụ */}
-            <View style={styles.timeServeContainer}>
-              <Text style={styles.inputLabel}>Thời gian phục vụ</Text>
-              <View style={styles.timeServeButtons}>
-                {timeServeOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.key}
-                    style={[
-                      styles.timeServeButton,
-                      price.time_serve === option.key && styles.selectedTimeServe
-                    ]}
-                    onPress={() => updatePriceField(index, "time_serve", option.key)}
-                  >
-                    <Text style={[
-                      styles.timeServeButtonText,
-                      price.time_serve === option.key && styles.selectedTimeServeText
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.priceInputWrapper}>
-              <Text style={styles.inputLabel}>Giá (VNĐ)</Text>
-              <TextInput
-                style={styles.priceInput}
-                placeholder="0"
-                value={price.price}
-                onChangeText={(text) => updatePriceField(index, "price", text)}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
+
+      {/* Phần giá - cho phép nhiều giá */}
+      <View style={styles.pricesSection}>
+        <View style={styles.pricesSectionHeader}>
+          <Text style={styles.pricesSectionTitle}>Giá món ăn *</Text>
+          <TouchableOpacity 
+            style={styles.addPriceButton}
+            onPress={addPriceSlot}
+            disabled={loading || prices.length >= 4}
+          >
+            <Text style={styles.addPriceButtonText}>+ Thêm giá</Text>
+          </TouchableOpacity>
         </View>
-      ))}
-      
-      <TouchableOpacity 
-        style={styles.addPriceButton} 
-        onPress={addPriceField}
-        disabled={loading}
-      >
-        <Text style={styles.addPriceButtonText}>+ Thêm giá cho thời gian khác</Text>
-      </TouchableOpacity>
+        
+        {prices.map((priceItem, index) => renderPriceSlot(priceItem, index))}
+      </View>
       
       <TouchableOpacity 
         style={[styles.submitButton, loading && styles.disabledButton]} 
@@ -322,7 +458,6 @@ const AddFood = ({ navigation, route }) => {
         </Text>
       </TouchableOpacity>
 
-      {/* Modal chọn danh mục */}
       <Modal
         visible={showCategoryModal}
         transparent={true}
@@ -350,7 +485,7 @@ const AddFood = ({ navigation, route }) => {
                     styles.categoryItem,
                     foodData.food_category === item.id.toString() && styles.selectedCategoryItem
                   ]}
-                  onPress={() => handleSelectCategory(item.id, item.name)}
+                  onPress={() => handleSelectCategory(item.id)}
                 >
                   <Text style={[
                     styles.categoryItemText,
@@ -391,19 +526,6 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  helperText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 12,
-    fontStyle: "italic",
-  },
   input: {
     backgroundColor: "#fff",
     borderRadius: 8,
@@ -440,8 +562,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
-  
-  // Styles cho trạng thái món ăn
+  // Styles cho phần chọn ảnh
+  imagePickerButton: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  imagePickerText: {
+    fontSize: 16,
+    color: "#6200ee",
+  },
+  disabledText: {
+    color: "#999",
+  },
+  imagePreviewContainer: {
+    position: "relative",
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  imagePreview: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  removeImageText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   availabilityContainer: {
     marginBottom: 12,
   },
@@ -460,29 +624,33 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
   },
-  
-  imageButton: {
-    backgroundColor: "#6200ee",
-    padding: 12,
-    borderRadius: 8,
+  // Styles cho phần giá
+  pricesSection: {
+    marginBottom: 20,
+  },
+  pricesSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  imageButtonText: {
-    color: "#fff",
-    fontSize: 16,
+  pricesSectionTitle: {
+    fontSize: 18,
     fontWeight: "600",
+    color: "#333",
   },
-  previewImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    marginVertical: 12,
-    alignSelf: "center",
+  addPriceButton: {
+    backgroundColor: "#6200ee",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
-  
-  // Styles mới cho phần giá
-  priceContainer: {
+  addPriceButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  priceSlotContainer: {
     backgroundColor: "#fff",
     borderRadius: 8,
     padding: 16,
@@ -490,33 +658,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
-  priceHeader: {
+  priceSlotHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  priceLabel: {
+  priceSlotTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#6200ee",
   },
-  priceInputContainer: {
-    gap: 12,
+  removePriceButton: {
+    backgroundColor: "#ff4444",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  timeServeContainer: {
-    marginBottom: 12,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 8,
+  removePriceButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   timeServeButtons: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    marginBottom: 12,
   },
   timeServeButton: {
     paddingHorizontal: 12,
@@ -530,6 +700,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#6200ee",
     borderColor: "#6200ee",
   },
+  disabledTimeServe: {
+    backgroundColor: "#f0f0f0",
+    borderColor: "#ccc",
+  },
   timeServeButtonText: {
     fontSize: 14,
     color: "#333",
@@ -538,8 +712,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
-  priceInputWrapper: {
-    flex: 1,
+  disabledTimeServeText: {
+    color: "#999",
   },
   priceInput: {
     backgroundColor: "#f9f9f9",
@@ -548,33 +722,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     fontSize: 16,
-  },
-  
-  removeButton: {
-    backgroundColor: "#f44336",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  removeButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  addPriceButton: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "#0288d1",
-    borderStyle: "dashed",
-  },
-  addPriceButtonText: {
-    color: "#0288d1",
-    fontSize: 16,
-    fontWeight: "600",
+    marginBottom: 8,
   },
   submitButton: {
     backgroundColor: "#6200ee",
@@ -591,8 +739,6 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: "#ccc",
   },
-  
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
