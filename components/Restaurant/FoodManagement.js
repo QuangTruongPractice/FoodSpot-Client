@@ -71,7 +71,7 @@ const FoodManagement = () => {
           text1: "Lỗi",
           text2: "Vui lòng đăng nhập lại!",
         });
-        navigation.navigate("Auth", { screen: "Login" });
+        navigation.navigate("Login", { screen: "Login" });
         return;
       }
 
@@ -105,7 +105,7 @@ const FoodManagement = () => {
       if (ex.response?.status === 401) {
         errorMessage = "Phiên đăng nhập hết hạn!";
         await AsyncStorage.removeItem("access_token");
-        navigation.navigate("Auth", { screen: "Login" });
+        navigation.navigate("Login", { screen: "Login" });
       } else if (ex.response?.status === 403) {
         errorMessage = "Bạn không có quyền xem món ăn của nhà hàng này!";
       }
@@ -191,7 +191,7 @@ const FoodManagement = () => {
       <Card.Actions style={styles.cardActions}>
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate("EditFood", { restaurantId, food: item })}
+          onPress={() => navigation.navigate("EditFood", { restaurantId, foodID: item.id })}
           style={styles.actionButton}
           labelStyle={styles.actionButtonLabel}
         >
