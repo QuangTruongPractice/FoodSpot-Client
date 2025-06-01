@@ -197,8 +197,10 @@ const AddFood = ({ navigation, route }) => {
       if (foodData.image) {
         form.append("image", {
           uri: foodData.image.uri,
-          name: foodData.image.fileName || "food_image.jpg",
-          type: foodData.image.type || "image/jpeg"
+          name: foodData.image.fileName,
+          type: user.avatar.type && user.avatar.type.startsWith('image/')
+          ? user.avatar.type
+          : 'image/jpeg'
         });
       }
 

@@ -215,135 +215,138 @@ const EditFood = ({ navigation, route }) => {
     const uniqueTimeServes = [...new Set(timeServes)];
     return timeServes.length === uniqueTimeServes.length;
   };
-
   const handleUpdateFood = async () => {
-    // Validation
-    if (!foodData.name) {
-      Alert.alert("Lỗi", "Vui lòng điền tên món ăn!");
-      return;
-    }
-    if (!foodData.food_category) {
-      Alert.alert("Lỗi", "Vui lòng chọn danh mục!");
-      return;
-    }
-    if (!validatePrices()) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ giá hợp lệ và không trùng thời gian phục vụ!");
-      return;
-    }
+      // Validation
+      if (!foodData.name) {
+        Alert.alert("Lỗi", "Vui lòng điền tên món ăn!");
+        return;
+      }
+      if (!foodData.food_category) {
+        Alert.alert("Lỗi", "Vui lòng chọn danh mục!");
+        return;
+      }
+      if (!validatePrices()) {
+        Alert.alert("Lỗi", "Vui lòng nhập đầy đủ giá hợp lệ và không trùng thời gian phục vụ!");
+        return;
+      }
 
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const authApi = authApis(token);
+      setLoading(true);
+      try {
+        const token = await AsyncStorage.getItem("access_token");
+        const authApi = authApis(token);
 
-      // Chuẩn bị FormData
-      let form = new FormData();
-      form.append("name", foodData.name);
-      form.append("description", foodData.description || "");
-      form.append("food_category", parseInt(foodData.food_category));
-      form.append("restaurant", parseInt(restaurantId));
-      form.append("is_available", foodData.is_available.toString());
+        // Chuẩn bị FormData
+        let form = new FormData();
+        form.append("name", foodData.name);
+        form.append("description", foodData.description || "");
+        form.append("food_category", parseInt(foodData.food_category));
+        form.append("restaurant", parseInt(restaurantId));
+        form.append("is_available", foodData.is_available.toString());
 
-      // Chỉ thêm image vào FormData nếu có ảnh mới được chọn
-      if (foodData.image && foodData.image.uri) {
-        form.append("image", {
-          uri: foodData.image.uri,
-          name: foodData.image.fileName || `food_image_${finalFoodId}.jpg`,
-          type: foodData.image.type || "image/jpeg",
+        // Chỉ thêm image vào FormData nếu có ảnh mới được chọn
+        if (foodData.image === "") {
+            form.append("image", "");
+        } else if (foodData.image && foodData.image.uri) {
+            form.append("image", {
+                uri: foodData.image.uri,
+                name: foodData.image.fileName,
+                type: user.avatar.type && user.avatar.type.startsWith('image/')
+                ? user.avatar.type
+                : 'image/jpeg'
+            });
+        }
+        // QUAN TRỌNG: Không gửi originalImageUrl vì nó là string, không phải file object
+
+        console.log("🔍 Sending PATCH request with FormData");
+
+        // Gửi yêu cầu cập nhật món ăn
+        const response = await authApi.patch(endpoints["food-details"](finalFoodId), form, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
-      }
-      // Không gửi originalImageUrl vì nó là chuỗi, backend không xử lý được
 
-      console.log("🔍 Sending PATCH request with FormData:", form);
+        // Cập nhật giá
+        const foodResponse = await authApi.get(endpoints["food-details"](finalFoodId));
+        const existingPrices = foodResponse.data.prices || [];
 
-      // Gửi yêu cầu cập nhật món ăn
-      const response = await authApi.patch(endpoints["food-details"](finalFoodId), form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        const pricePromises = prices.map(async (priceItem) => {
+          const pricePayload = {
+            time_serve: priceItem.time_serve,
+            price: parseInt(priceItem.price),
+          };
 
-      // Cập nhật giá
-      const foodResponse = await authApi.get(endpoints["food-details"](finalFoodId));
-      const existingPrices = foodResponse.data.prices || [];
-
-      const pricePromises = prices.map(async (priceItem) => {
-        const pricePayload = {
-          time_serve: priceItem.time_serve,
-          price: parseInt(priceItem.price),
-        };
-
-        const existingPrice = existingPrices.find((p) => p.time_serve === priceItem.time_serve);
-        if (existingPrice) {
-          return authApi.patch(
-            endpoints["food-add-price"](finalFoodId),
-            pricePayload,
-            { headers: { "Content-Type": "application/json" } }
-          );
-        } else {
-          return authApi.post(
-            endpoints["food-add-price"](finalFoodId),
-            pricePayload,
-            { headers: { "Content-Type": "application/json" } }
-          );
-        }
-      });
-
-      const currentTimeServes = prices.map((p) => p.time_serve);
-      const pricesToDelete = existingPrices.filter((p) => !currentTimeServes.includes(p.time_serve));
-      const deletePromises = pricesToDelete.map((price) =>
-        authApi.delete(endpoints["food-add-price"](finalFoodId), {
-          params: { time_serve: price.time_serve },
-        })
-      );
-
-      await Promise.all([...pricePromises, ...deletePromises]);
-
-      Toast.show({
-        type: "success",
-        text1: "Thành công",
-        text2: `Cập nhật món ăn với ${prices.length} mức giá thành công!`,
-      });
-      navigation.goBack();
-    } catch (error) {
-      let errorMessage = "Không thể cập nhật món ăn! Vui lòng kiểm tra lại.";
-      if (error.response?.data) {
-        if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.data.details) {
-          if (typeof error.response.data.details === "object") {
-            const details = Object.entries(error.response.data.details).map(([key, value]) =>
-              Array.isArray(value) ? `${key}: ${value.join("; ")}` : `${key}: ${value}`
+          const existingPrice = existingPrices.find((p) => p.time_serve === priceItem.time_serve);
+          if (existingPrice) {
+            return authApi.patch(
+              endpoints["food-update-price"](finalFoodId),
+              pricePayload,
+              { headers: { "Content-Type": "application/json" } }
             );
-            errorMessage = details.join("; ");
           } else {
-            errorMessage = error.response.data.details;
+            return authApi.post(
+              endpoints["food-add-price"](finalFoodId),
+              pricePayload,
+              { headers: { "Content-Type": "application/json" } }
+            );
           }
-        } else {
-          const errors = Object.entries(error.response.data).map(([key, value]) =>
-            Array.isArray(value) ? `${key}: ${value.join(", ")}` : `${key}: ${value}`
-          );
-          errorMessage = errors.join("; ");
-        }
-      } else if (error.code === "ECONNABORTED") {
-        errorMessage = "Yêu cầu hết thời gian. Vui lòng kiểm tra kết nối mạng.";
-      } else if (error.response?.status === 401) {
-        errorMessage = "Phiên đăng nhập hết hạn!";
-        await AsyncStorage.removeItem("access_token");
-        navigation.navigate("Auth", { screen: "Login" });
-      } else if (error.response?.status === 403) {
-        errorMessage = "Bạn không có quyền chỉnh sửa món ăn này!";
-      }
+        });
 
-      Alert.alert("Lỗi", errorMessage);
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: errorMessage,
-      });
-      console.error("Lỗi cập nhật món ăn:", error.response?.data || error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const currentTimeServes = prices.map((p) => p.time_serve);
+        const pricesToDelete = existingPrices.filter((p) => !currentTimeServes.includes(p.time_serve));
+        const deletePromises = pricesToDelete.map((price) =>
+          authApi.delete(endpoints["food-delete-price"](finalFoodId), {
+            params: { time_serve: price.time_serve },
+          })
+        );
+
+        await Promise.all([...pricePromises, ...deletePromises]);
+
+        Toast.show({
+          type: "success",
+          text1: "Thành công",
+          text2: `Cập nhật món ăn với ${prices.length} mức giá thành công!`,
+        });
+        navigation.goBack();
+      } catch (error) {
+        let errorMessage = "Không thể cập nhật món ăn! Vui lòng kiểm tra lại.";
+        if (error.response?.data) {
+          if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data.details) {
+            if (typeof error.response.data.details === "object") {
+              const details = Object.entries(error.response.data.details).map(([key, value]) =>
+                Array.isArray(value) ? `${key}: ${value.join("; ")}` : `${key}: ${value}`
+              );
+              errorMessage = details.join("; ");
+            } else {
+              errorMessage = error.response.data.details;
+            }
+          } else {
+            const errors = Object.entries(error.response.data).map(([key, value]) =>
+              Array.isArray(value) ? `${key}: ${value.join(", ")}` : `${key}: ${value}`
+            );
+            errorMessage = errors.join("; ");
+          }
+        } else if (error.code === "ECONNABORTED") {
+          errorMessage = "Yêu cầu hết thời gian. Vui lòng kiểm tra kết nối mạng.";
+        } else if (error.response?.status === 401) {
+          errorMessage = "Phiên đăng nhập hết hạn!";
+          await AsyncStorage.removeItem("access_token");
+          navigation.navigate("Auth", { screen: "Login" });
+        } else if (error.response?.status === 403) {
+          errorMessage = "Bạn không có quyền chỉnh sửa món ăn này!";
+        }
+
+        Alert.alert("Lỗi", errorMessage);
+        Toast.show({
+          type: "error",
+          text1: "Lỗi",
+          text2: errorMessage,
+        });
+        console.error("Lỗi cập nhật món ăn:", error.response?.data || error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const renderPriceSlot = (priceItem, index) => (
     <View key={priceItem.id} style={styles.priceSlotContainer}>

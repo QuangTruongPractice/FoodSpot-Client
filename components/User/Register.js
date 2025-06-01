@@ -121,7 +121,9 @@ const Register = () => {
                     form.append("avatar", {
                         uri: user.avatar.uri,
                         name: user.avatar.fileName || "avatar.png",
-                        type: user.avatar.type || "image/png"
+                        type: user.avatar.type && user.avatar.type.startsWith('image/')
+                        ? user.avatar.type
+                        : 'image/jpeg'
                     });
                 }
 
