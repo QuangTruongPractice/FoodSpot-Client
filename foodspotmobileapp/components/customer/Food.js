@@ -9,6 +9,7 @@ import { checkToken, getCurrentTimeServe, loadRestaurantDetails, loadFoodDetails
  } from "../../configs/Data";
 import styles from "../../styles/FoodStyles";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Icon } from "react-native-paper";
 
 const Food = ({ route }) => {
   const { foodId } = route.params; // Lấy foodId từ route.params
@@ -191,9 +192,11 @@ const Food = ({ route }) => {
         
         {/* Nút thêm vào giỏ và đặt hàng */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.buttonAdd}
-            onPress={addToCart}>
-            <Text style={styles.buttonText}>Thêm vào giỏ</Text>
+          <TouchableOpacity style={styles.buttonAdd} onPress={addToCart}>
+            <View style={{ flexDirection: "row", justifyContent: "center" }}>
+              <Icon source="cart" size={20} color="white" style={{ marginRight: 8 }} />
+              <Text style={styles.buttonText}>Thêm vào giỏ</Text>
+            </View>
           </TouchableOpacity>
         </View>
 

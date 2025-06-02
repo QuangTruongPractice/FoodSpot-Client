@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApis, endpoints } from "../../configs/Apis";
 import MapView, { Marker } from "react-native-maps";
-import * as Location from "expo-location";
 import { TextInput } from "react-native-paper";
 import { checkToken, loadUser } from "../../configs/Data";
 import styles from "../../styles/AddAddressStyles";
+import { fetchMapboxSuggestions, fetchMapboxPlace } from "../../configs/Map";
 
 const AddAddress = () => {
   const nav = useNavigation();
@@ -17,6 +16,8 @@ const AddAddress = () => {
     name: "", phone: "", street: "", detail: "",
     latitude: null, longitude: null, addressName: "",
   });
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
 
   const setState = (value, key) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -35,6 +36,42 @@ const AddAddress = () => {
     loadUserData();
   }, []);
 
+  const fetchSuggestions = async (text) => {
+    setQuery(text);
+    const results = await fetchMapboxSuggestions(text);
+    setSuggestions(results);
+  };
+
+  const handleSelectSuggestion = (item) => {
+    const [longitude, latitude] = item.center;
+    const placeName = item.place_name;
+    setMapRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+    setForm({ ...form, latitude, longitude, street: placeName });
+    setQuery(placeName);
+    setSuggestions([]);
+    setShowMap(true);
+  };
+
+  const handleSubmitEditing = async () => {
+    if (!query.trim()) return;
+    const place = await fetchMapboxPlace(query);
+    if (place) handleSelectSuggestion(place);
+  };
+
+  const handleMarkerDragEnd = (e) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setMapRegion({ ...mapRegion, latitude, longitude });
+  };
+
+  const confirmLocation = () => {
+    if (mapRegion) {
+      const { latitude, longitude } = mapRegion;
+      const formattedAddress = `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
+      setForm({ ...form, latitude, longitude, street: query, formattedAddress });
+    }
+    setShowMap(false);
+  };
+
   const onSave = async () => {
     try {
       if (!form.addressName || !form.street) {
@@ -52,98 +89,81 @@ const AddAddress = () => {
     }
   };
 
-  const getCurrentLocation = async () => {
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        alert("Không có quyền truy cập vị trí!");
-        return null;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      return { latitude: location.coords.latitude, longitude: location.coords.longitude };
-    } catch (error) {
-      console.error("Lỗi khi lấy vị trí GPS:", error);
-      return null;
-    }
-  };
-
-  const handleAddressPress = async () => {
-    const location = await getCurrentLocation();
-    if (!location) return;
-    setMapRegion({
-      latitude: location.latitude, longitude: location.longitude,
-      latitudeDelta: 0.01, longitudeDelta: 0.01,
-    });
-    setShowMap(true);
-  };
-
-  const handleMarkerDragEnd = (e) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setMapRegion({ ...mapRegion, latitude, longitude });
-  };
-
-  const confirmLocation = () => {
-    if (mapRegion) {
-      const { latitude, longitude } = mapRegion;
-      const formattedAddress = `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
-      setForm({ ...form, latitude, longitude, street: formattedAddress, formattedAddress });
-    }
-    setShowMap(false);
-  };
-
-  const fields = [
-    { label: "Họ tên", field: "name", editable: false },
-    { label: "Số điện thoại", field: "phone", editable: false },
-    { label: "Tên địa chỉ", field: "addressName", editable: true },
-    { label: "Địa chỉ (ấn để chọn)", field: "street", editable: false, pressable: true },
-    { label: "Ghi chú (không bắt buộc)", field: "detail", editable: true },
-  ];
-
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll}>
-        {fields.map((f) => {
-          const input = (
+      <FlatList
+        data={suggestions}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <>
             <TextInput
-              key={f.field}
-              label={f.label}
-              value={form[f.field]}
-              onChangeText={(v) => setState(v, f.field)}
-              editable={f.editable}
+              label="Họ tên"
+              value={form.name}
+              editable={false}
               mode="outlined"
               style={styles.textInput}
             />
-          );
-          return f.pressable ? (
-            <TouchableOpacity key={f.field} onPress={handleAddressPress}>
-              {input}
-            </TouchableOpacity>
-          ) : input;
-        })}
-
-        {showMap && mapRegion && (
-          <>
-            <MapView
-              style={styles.mapContainer}
-              showsUserLocation
-              loadingEnabled
-              region={mapRegion}
-              onRegionChangeComplete={(region) => setMapRegion(region)}
-            >
-              <Marker coordinate={mapRegion} draggable onDragEnd={handleMarkerDragEnd} />
-            </MapView>
-            <TouchableOpacity style={styles.confirmBtn} onPress={confirmLocation}>
-              <Text style={styles.confirmBtnText}>Đánh dấu vị trí này</Text>
-            </TouchableOpacity>
+            <TextInput
+              label="Số điện thoại"
+              value={form.phone}
+              editable={false}
+              mode="outlined"
+              style={styles.textInput}
+            />
+            <TextInput
+              label="Tên địa chỉ"
+              value={form.addressName}
+              onChangeText={(v) => setState(v, "addressName")}
+              mode="outlined"
+              style={styles.textInput}
+            />
+            <TextInput
+              label="Địa chỉ"
+              value={query}
+              onChangeText={fetchSuggestions}
+              onSubmitEditing={handleSubmitEditing}
+              mode="outlined"
+              style={styles.textInput}
+            />
           </>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleSelectSuggestion(item)} style={{ padding: 10, borderBottomColor: '#ccc', borderBottomWidth: 1 }}>
+            <Text>{item.place_name}</Text>
+          </TouchableOpacity>
         )}
-      </ScrollView>
-
+        ListFooterComponent={
+          <>
+            <TextInput
+              label="Ghi chú (không bắt buộc)"
+              value={form.detail}
+              onChangeText={(v) => setState(v, "detail")}
+              mode="outlined"
+              style={styles.textInput}
+            />
+            {showMap && mapRegion && (
+              <>
+                <MapView
+                  style={styles.mapContainer}
+                  region={mapRegion}
+                  onRegionChangeComplete={(region) => setMapRegion(region)}
+                >
+                  <Marker coordinate={mapRegion} draggable onDragEnd={handleMarkerDragEnd} />
+                </MapView>
+                <TouchableOpacity style={styles.confirmBtn} onPress={confirmLocation}>
+                  <Text style={styles.confirmBtnText}>Đánh dấu vị trí này</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </>
+        }
+      />
       <TouchableOpacity style={styles.saveBtn} onPress={onSave}>
         <Text style={styles.saveBtnText}>Lưu</Text>
       </TouchableOpacity>
     </View>
   );
+
 };
 
 export default AddAddress;

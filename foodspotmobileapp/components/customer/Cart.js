@@ -2,7 +2,6 @@ import {  useState, useEffect } from "react";
 import { Text, View, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { authApis, endpoints } from "../../configs/Apis";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { checkToken, loadCart, loadSubCart } from "../../configs/Data";

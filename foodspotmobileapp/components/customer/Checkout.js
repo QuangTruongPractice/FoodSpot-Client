@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ScrollView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { authApis,endpoints } from '../../configs/Apis';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { reverseGeocode, calculateDistance } from '../../configs/Map';
-import { loadRestaurantDetails } from '../../configs/Data';
+import { loadRestaurantDetails, checkToken } from '../../configs/Data';
 import styles from "../../styles/CheckoutStyles";
 
 const Checkout = ({ navigation, route }) => {
