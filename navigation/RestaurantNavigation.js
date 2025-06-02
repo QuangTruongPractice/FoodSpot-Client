@@ -8,6 +8,7 @@ import ManageRestaurant from "../components/restaurant/ManageRestaurant";
 import ManageOrders from "../components/restaurant/ManageOrders";
 import ManageMenus from "../components/restaurant/ManageMenus";
 import FoodManagement from "../components/restaurant/FoodManagement";
+import OrderDetails from "../components/restaurant/OrderDetails";
 
 const RestaurantStack = createNativeStackNavigator();
 
@@ -17,7 +18,7 @@ const RestaurantNavigation = () => (
       headerStyle: { backgroundColor: "#6200ee" },
       headerTintColor: "#fff",
       headerTitleStyle: { fontWeight: "bold" },
-      headerShown: true, // Bật header để hiển thị tiêu đề
+      headerShown: true,
     }}
   >
     <RestaurantStack.Screen
@@ -64,6 +65,11 @@ const RestaurantNavigation = () => (
       name="ManageMenus"
       component={ManageMenus}
       options={{ title: "Quản lý Menu" }}
+    />
+    <RestaurantStack.Screen
+      name="OrderDetails"
+      component={OrderDetails}
+      options={{ title: "Chi tiết Đơn hàng" }}
     />
   </RestaurantStack.Navigator>
 );

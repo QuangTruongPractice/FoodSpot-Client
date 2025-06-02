@@ -1,14 +1,17 @@
 import axios from "axios"
 import qs from "qs"
 
-const BASE_URL = "http://192.168.1.38:8000/"
+const BASE_URL = "http://192.168.1.113:8000/"
 
 export const endpoints = {
   //order
   "orders": "/orders/",
   "orders-info": (orderId) => `/orders/${orderId}/`,
   "orders-detail": (id) => `/order-detail/${id}/`,
+  "orders-current-restaurant": "/orders/current-restaurant-orders/",
   "checkout": "/orders/checkout/",
+  "by-order": (orderId) => `/order-detail/by-order/${orderId}/`,
+
 
   //payment
   "momo-payment": "/momo-payment/",

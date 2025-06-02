@@ -1,11 +1,12 @@
-import React, {  useState } from "react";
-import { Text, View, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from "react-native";
+import {  useState, useEffect } from "react";
+import { Text, View, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import MyStyles from "../../styles/MyStyles";
 import { authApis, endpoints } from "../../configs/Apis";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { useCallback } from 'react';
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { checkToken, loadCart, loadSubCart } from "../../configs/Data";
+import styles from "../../styles/CartStyles";
 
 const Cart = () => {
   const [subCarts, setSubCarts] = useState([]);
@@ -14,25 +15,22 @@ const Cart = () => {
   const [selectedSubCarts, setSelectedSubCarts] = useState(new Set());
   const [cartId, setCartId] = useState(null);
   const nav = useNavigation();
+  const isFocused = useIsFocused();
 
   const fetchSubCarts = async () => {
     setLoading(true)
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      nav.replace("Login");
-      return;
-    }
+    const token = await checkToken(nav);
     try {
-      const cartRes = await authApis(token).get(endpoints["my-cart"]);
+      const cartRes = await loadCart(token);
       // Kiểm tra nếu response là dạng không có giỏ hàng
-      if (cartRes.data?.message === "Giỏ hàng của bạn hiện tại chưa có.") {
+      if (cartRes.message === "Giỏ hàng không tồn tại.") {
         setCartId(null);
         setSubCarts([]);
         return;
       }
-      setCartId(cartRes.data.id);
-      const res = await authApis(token).get(endpoints["sub-carts"]);
-      setSubCarts(res.data);
+      setCartId(cartRes.id);
+      const res = await loadSubCart(token);
+      setSubCarts(res);
     } catch (error) {
       console.error(error);
     } finally {
@@ -40,14 +38,14 @@ const Cart = () => {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
+  useEffect(() => {
+    if (isFocused) {
       fetchSubCarts();
-    }, [])
-  );
+    }
+  }, [isFocused]);
 
   const updateQuantity = async (sub_cart_item_id, quantity) => {
-    const token = await AsyncStorage.getItem("token");
+    const token = await checkToken(nav);
     try {
       const res = await authApis(token).patch(endpoints["update-sub-cart-item"], {
         sub_cart_item_id: sub_cart_item_id,
@@ -121,7 +119,7 @@ const Cart = () => {
           text: "Xóa",
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem("token");
+              const token = await checkToken(nav);
               // Xóa toàn bộ subCart nếu được chọn
               if (selectedSubCarts.size > 0) {
                 await authApis(token).post(endpoints["delete-multiple-sub-carts"], {
@@ -283,28 +281,5 @@ const Cart = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  subCartContainer: { backgroundColor: "#fff", marginVertical: 8, padding: 10, borderRadius: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  storeName: { fontSize: 16, fontWeight: "bold", marginBottom: 8, marginLeft: 30 },
-  itemContainer: { flexDirection: "row", alignItems: "center", marginBottom: 10, position: "relative" },
-  checkboxSubCart: { position: "absolute", top: 10, left: 10, zIndex: 10 },
-  checkboxItem: { marginRight: 5 },
-  image: { width: 70, height: 70, borderRadius: 8, marginRight: 10 },
-  itemInfo: { flex: 1, justifyContent: "center" },
-  foodName: { fontSize: 14, fontWeight: "600" },
-  price: { fontSize: 14, color: "red" },
-  quantityControls: { flexDirection: "row", alignItems: "center", marginLeft: 10 },
-  quantity: { marginHorizontal: 8, fontSize: 16, fontWeight: "bold" },
-  button: { backgroundColor: "#eee", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 5 },
-  buttonText: { fontSize: 16, fontWeight: "bold" },
-  totalPriceText: { textAlign: "right", fontSize: 16, fontWeight: "bold", marginTop: 10, color: "green" },
-  checkoutButton: { backgroundColor: "#FF424E", flex: 1, marginLeft: 5, padding: 15, borderRadius: 10, alignItems: "center" },
-  checkoutText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  buttonGroup: { flexDirection: "row", justifyContent: "space-between", padding: 10 },
-  deleteButton: { backgroundColor: "#aaa", flex: 1, marginRight: 5, padding: 15, borderRadius: 10, alignItems: "center" },
-  buttonTextWhite: { color: "#fff", fontSize: 16, fontWeight: "bold" }
-});
 
 export default Cart;

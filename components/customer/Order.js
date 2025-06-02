@@ -1,71 +1,82 @@
-import { Text, View, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { Text, View, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useState, useEffect } from "react";
-import { authApis, endpoints } from '../../configs/Apis';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import { checkToken, loadOrder } from "../../configs/Data";
+import styles from "../../styles/OrderStyles";
 
 const Order = () => {
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const nav = useNavigation();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const nav = useNavigation();
 
-    const loadOrders = async () => {
-        setLoading(true);
-        const token = await AsyncStorage.getItem("token");
+  const loadOrders = async () => {
+    if (page <= 0) return;
 
-        if (!token) {
-            nav.replace("Login");
-            return;
-        }
+    const isFirstPage = page === 1;
+    if (isFirstPage) setLoading(true);
+    else setLoadingMore(true);
 
-        try {
-            const res = await authApis(token).get(endpoints["orders"]);
-            setOrders(res.data);
-        } catch (err) {
-            console.error("Error loading orders:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      const token = await checkToken(nav);
+      const res = await loadOrder(token, { page });
 
-    useEffect(() => {
-        loadOrders();
-    }, []);
+      if (isFirstPage) {
+        setOrders(res.results);
+      } else {
+        setOrders((prev) => [...prev, ...res.results]);
+      }
 
+      if (res.next === null) setPage(0);
+    } catch (ex) {
+      console.error(ex);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
-    return (
-        <ScrollView style={{ padding: 10 }}>
-            {loading ? (
-                <ActivityIndicator size="large" color="#0000ff" />
-            ) : (
-                orders.map((order) => (
-                    <TouchableOpacity
-                        key={order.id}
-                        onPress={() => nav.navigate("OrderInfo", {orderId: order.id})}
-                        style={{
-                            backgroundColor: "#f9f9f9",
-                            padding: 15,
-                            marginBottom: 10,
-                            borderRadius: 10,
-                            shadowColor: "#000",
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 2,
-                            elevation: 2
-                        }}
-                    >
-                        <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-                            Nhà hàng: {order.restaurant_name}
-                        </Text>
-                        <Text>Ngày đặt: {order.ordered_date}</Text>
-                        <Text>Phí ship: {order.shipping_fee.toLocaleString()} VND</Text>
-                        <Text>Tổng tiền: {order.total.toLocaleString()} VND</Text>
-                        <Text>Trạng thái: {order.status}</Text>
-                    </TouchableOpacity>
-                ))
-            )}
-        </ScrollView>
-    );
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      onPress={() => nav.navigate("OrderInfo", { orderId: item.id })}
+      style={styles.card}
+    >
+      <Text style={styles.cardTitle}>
+        Nhà hàng: {item.restaurant_name} #{item.id}
+      </Text>
+      <Text>Ngày đặt: {item.ordered_date}</Text>
+      <Text>Phí ship: {item.shipping_fee.toLocaleString()} VND</Text>
+      <Text>Tổng tiền: {item.total.toLocaleString()} VND</Text>
+      <Text>Trạng thái: {item.status}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      {loading && page === 1 ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <FlatList
+          data={orders}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          onEndReached={() => {
+            if (!loadingMore && page > 0) setPage(page + 1);
+          }}
+          onEndReachedThreshold={0.2}
+          ListEmptyComponent={() => (
+            <Text style={styles.emptyText}>Không có đơn hàng nào.</Text>
+          )}
+          ListFooterComponent={loadingMore ? <ActivityIndicator size={30} /> : null}
+        />
+      )}
+    </View>
+  );
 };
 
 export default Order;

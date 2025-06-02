@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from "react";
-import { Text, View, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { useState, useCallback } from "react";
+import { Text, View, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
 import MyStyles from "../../styles/MyStyles";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { authApis, endpoints } from "../../configs/Apis";
 import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
-import axios from "axios";
+import { reverseGeocode } from "../../configs/Map";
+import { checkToken, loadAddressList } from "../../configs/Data";
+import styles from "../../styles/AddressStyles";
 
 const Address = () => {
   const [address, setAddress] = useState(null);
@@ -13,30 +13,12 @@ const Address = () => {
   const route = useRoute();
   const isSelectMode = route.params?.selectMode === true;
 
-  const reverseGeocode = async (lat, lng) => {
-    const url = "https://maps.gomaps.pro/maps/api/geocode/json";
-    const params = {
-      latlng: `${lat},${lng}`,
-      language: "vi",
-      key: "AlzaSye8iq_6m5zBA3xW9jMcCSFKajxW_y-OsMo",
-    };
-
-    const res = await axios.get(url, { params });
-    if (res.data.status !== "OK" || res.data.results.length === 0)
-      throw new Error("Không tìm thấy địa chỉ!");
-    return res.data.results[0].formatted_address;
-  };
-
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        nav.replace("Login");
-        return;
-      }
-      const addRes = await authApis(token).get(endpoints["users-address_list"]);
-      const list = addRes.data.addresses || [];
+      const token = await checkToken(nav);
+      const addRes = await loadAddressList(token);
+      const list = addRes.addresses || [];
       const formattedAddresses = await Promise.all(
         list.map(async (item) => {
           try {
@@ -94,13 +76,3 @@ const Address = () => {
 
 export default Address;
 
-const styles = StyleSheet.create({
-  container: { paddingBottom: 60 },
-  loading: { marginTop: 40 },
-  emptyText: { marginTop: 24, textAlign: "center" },
-  card: { backgroundColor: "#fff", borderRadius: 8, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: "#ddd", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  cardTitle: { fontWeight: "bold", marginBottom: 4 },
-  cardAddress: { color: "#555" },
-  addBtn: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "#9c27b0", paddingVertical: 14, alignItems: "center" },
-  addBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-});

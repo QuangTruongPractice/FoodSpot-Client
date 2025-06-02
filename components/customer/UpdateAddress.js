@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApis, endpoints } from "../../configs/Apis";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { TextInput } from "react-native-paper";
+import { checkToken, loadAddress } from "../../configs/Data";
+import styles from "../../styles/UpdateAddressStyles";
 
 const UpdateAddress = () => {
   const navigation = useNavigation();
@@ -18,10 +20,8 @@ const UpdateAddress = () => {
   useEffect(() => {
     const fetchAddress = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
-        const res = await authApis(token).get(endpoints["users-address_read"](addressId));
-        const address = res.data;
+        const token = await checkToken(navigation);
+        const address = await loadAddress(token, addressId);
         setForm({
           addressName: address.name,
           street: `Lat: ${address.latitude}, Lng: ${address.longitude}`,
@@ -40,8 +40,7 @@ const UpdateAddress = () => {
 
   const onUpdate = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) return;
+      const token = await checkToken(navigation);
       await authApis(token).put(endpoints["users-address_read"](addressId), {
         name: form.addressName,
         latitude: form.latitude,
@@ -60,7 +59,7 @@ const UpdateAddress = () => {
       [
         { text: "Hủy", style: "cancel" },
         { text: "Xóa", onPress: async () => {
-            const token = await AsyncStorage.getItem("token");
+            const token = await checkToken(navigation);
             if (!token) return;
             await authApis(token).delete(`${endpoints["users-address_read"](addressId)}`);
             navigation.goBack();
@@ -158,13 +157,5 @@ const UpdateAddress = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  mapContainer: { width: "100%", height: 300, marginVertical: 20 },
-  confirmBtn: { backgroundColor: "#2196F3", paddingVertical: 12, borderRadius: 8, alignItems: "center", marginBottom: 10 },
-  confirmBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  saveBtn: { backgroundColor: "#9c27b0", paddingVertical: 14, alignItems: "center", margin: 5 },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-});
 
 export default UpdateAddress;
