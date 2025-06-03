@@ -1,82 +1,63 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, FlatList, TextInput, Button, StyleSheet, Alert, Switch } from 'react-native';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import {
+  Card,
+  Title,
+  Paragraph,
+  Button,
+  IconButton,
+  Chip,
+} from 'react-native-paper';
 import { MyUserContext } from '../../configs/MyContexts';
 import { authApis, endpoints } from '../../configs/Apis';
 import { loadRestaurantMenu, checkToken } from '../../configs/Data';
 import MyStyles from '../../styles/MyStyles';
+import Toast from 'react-native-toast-message';
 
 const ManageMenus = ({ route, navigation }) => {
   const [user] = useContext(MyUserContext);
-  const {restaurantId} = route.params;
+  const { restaurantId } = route.params;
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newMenu, setNewMenu] = useState({
-    name: '',
-    description: '',
-    time_serve: 'MORNING',
-    is_active: true,
-  });
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadMenusData = async () => {
-      try {
-        // Kiểm tra token trước khi load dữ liệu
-        const token = await checkToken(navigation);
-        if (!token) return;
-
-        if (!restaurantId || restaurantId.length === 0) {
-          Alert.alert('Lỗi', 'Không có nhà hàng nào được liên kết với tài khoản!');
-          return;
-        }
-        const menuData = await loadRestaurantMenu(restaurantId);
-        
-        setMenus(menuData);
-      } catch (error) {
-        console.error('Lỗi khi tải menu:', error);
-        Alert.alert('Lỗi', 'Không thể tải danh sách menu.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMenusData();
-  }, [user, restaurantId, navigation]);
-
-  const handleAddMenu = async () => {
-    if (!newMenu.name.trim()) {
-      Alert.alert('Lỗi', 'Tên menu không được để trống!');
-      return;
-    }
-
-    if (!['MORNING', 'NOON', 'EVENING', 'NIGHT'].includes(newMenu.time_serve)) {
-      Alert.alert('Lỗi', 'Thời gian phục vụ phải là MORNING, NOON, EVENING hoặc NIGHT!');
-      return;
-    }
-
+  const loadMenusData = async () => {
     try {
       const token = await checkToken(navigation);
       if (!token) return;
 
-      const menuPayload = {
-        ...newMenu,
-        restaurant: restaurantId,
-        foods: [], 
-      };
-
-      const res = await authApis(token).post(endpoints['menus'], menuPayload);
-      setMenus([...menus, res.data]);
-      setNewMenu({ 
-        name: '', 
-        description: '', 
-        time_serve: 'MORNING', 
-        is_active: true 
-      });
-      Alert.alert('Thành công', 'Thêm menu thành công!');
+      if (!restaurantId || restaurantId.length === 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: 'Không có nhà hàng nào được liên kết với tài khoản!',
+        });
+        return;
+      }
+      const menuData = await loadRestaurantMenu(restaurantId);
+      setMenus(menuData);
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể thêm menu!');
-      console.error('Lỗi thêm menu:', error);
+      console.error('Lỗi khi tải menu:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể tải danh sách menu.',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    loadMenusData();
+  }, [user, restaurantId, navigation]);
 
   const handleUpdateMenu = async (menuId, updatedMenu) => {
     try {
@@ -85,9 +66,17 @@ const ManageMenus = ({ route, navigation }) => {
 
       const res = await authApis(token).patch(endpoints['menus-details'](menuId), updatedMenu);
       setMenus(menus.map((menu) => (menu.id === menuId ? res.data : menu)));
-      Alert.alert('Thành công', 'Cập nhật menu thành công!');
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: 'Cập nhật menu thành công!',
+      });
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật menu!');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật menu!',
+      });
       console.error('Lỗi cập nhật menu:', error);
     }
   };
@@ -108,9 +97,17 @@ const ManageMenus = ({ route, navigation }) => {
 
               await authApis(token).delete(endpoints['menus-details'](menuId));
               setMenus(menus.filter((menu) => menu.id !== menuId));
-              Alert.alert('Thành công', 'Xóa menu thành công!');
+              Toast.show({
+                type: 'success',
+                text1: 'Thành công',
+                text2: 'Xóa menu thành công!',
+              });
             } catch (error) {
-              Alert.alert('Lỗi', 'Không thể xóa menu!');
+              Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: 'Không thể xóa menu!',
+              });
               console.error('Lỗi xóa menu:', error);
             }
           },
@@ -126,176 +123,266 @@ const ManageMenus = ({ route, navigation }) => {
 
   const getTimeServeText = (timeServe) => {
     const timeMap = {
-      'MORNING': 'Buổi sáng',
-      'NOON': 'Buổi trưa', 
-      'EVENING': 'Buổi tối',
-      'NIGHT': 'Buổi đêm'
+      MORNING: 'Buổi sáng',
+      NOON: 'Buổi trưa',
+      EVENING: 'Buổi tối',
+      NIGHT: 'Buổi đêm',
     };
     return timeMap[timeServe] || timeServe;
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    setMenus([]);
+    loadMenusData();
+  };
+
   const renderMenu = ({ item }) => (
-    <View style={styles.menuItem}>
-      <View style={styles.menuHeader}>
-        <Text style={styles.menuName}>{item.name}</Text>
-        <Switch
-          value={item.is_active}
-          onValueChange={() => toggleMenuStatus(item.id, item.is_active)}
-          trackColor={{ false: '#767577', true: '#81b0ff' }}
-          thumbColor={item.is_active ? '#f5dd4b' : '#f4f3f4'}
-        />
-      </View>
-      
-      <Text style={styles.menuInfo}>Nhà hàng: {item.restaurant}</Text>
-      <Text style={styles.menuInfo}>Mô tả: {item.description || 'Không có mô tả'}</Text>
-      <Text style={styles.menuInfo}>Thời gian: {getTimeServeText(item.time_serve)}</Text>
-      <Text style={styles.menuInfo}>Số món ăn: {item.foods?.length || 0}</Text>
-      <Text style={styles.menuStatus}>
-        Trạng thái: {item.is_active ? 'Đang hoạt động' : 'Tạm dừng'}
-      </Text>
-      
-      <View style={styles.buttonContainer}>
+    <Card style={styles.menuItem}>
+      <Card.Content>
+        <View style={styles.menuHeader}>
+          <Title style={styles.menuName}>{item.name}</Title>
+          <Chip
+            selected={item.is_active}
+            onPress={() => toggleMenuStatus(item.id, item.is_active)}
+            style={styles.statusChip}
+            textStyle={{ color: item.is_active ? '#2e7d32' : '#d32f2f' }}
+          >
+            {item.is_active ? 'Đang hoạt động' : 'Tạm dừng'}
+          </Chip>
+        </View>
+        <Paragraph style={styles.menuInfo}>
+          Nhà hàng: {item.restaurant_name || item.restaurant}
+        </Paragraph>
+        <Paragraph style={styles.menuInfo}>
+          Mô tả: {item.description || 'Không có mô tả'}
+        </Paragraph>
+        <Paragraph style={styles.menuInfo}>
+          Thời gian: {getTimeServeText(item.time_serve)}
+        </Paragraph>
+        <Paragraph style={styles.menuInfo}>
+          Số món ăn: {item.foods?.length || 0}
+        </Paragraph>
+      </Card.Content>
+      <Card.Actions style={styles.buttonContainer}>
         <Button
-          title="Cập nhật"
+          mode="outlined"
+          onPress={() => navigation.navigate('AddMenuFood', { menuId: item.id, restaurantId })}
+          style={styles.actionButton}
+          labelStyle={styles.actionButtonLabel}
+          compact
+        >
+          Thêm món
+        </Button>
+        <Button
+          mode="outlined"
+          onPress={() => navigation.navigate('EditMenu', { menuId: item.id })}
+          style={styles.actionButton}
+          labelStyle={styles.actionButtonLabel}
+          compact
+        >
+          Sửa
+        </Button>
+        <Button
+          mode="outlined"
           onPress={() =>
-            handleUpdateMenu(item.id, {
-              name: item.name,
-              description: item.description,
-              time_serve: item.time_serve,
-            })
+            navigation.navigate('MenuDetails', { menuId: item.id, restaurantId })
           }
-        />
-        <Button 
-          title="Xóa" 
-          onPress={() => handleDeleteMenu(item.id)} 
-          color="red" 
-        />
+          style={styles.actionButton}
+          labelStyle={styles.actionButtonLabel}
+          compact
+        >
+          Chi tiết
+        </Button>
+        <Button
+          mode="outlined"
+          onPress={() => handleDeleteMenu(item.id)}
+          style={styles.actionButton}
+          labelStyle={[styles.actionButtonLabel, { color: '#d32f2f' }]}
+          compact
+        >
+          Xóa
+        </Button>
+      </Card.Actions>
+    </Card>
+  );
+
+  const renderLoadingSkeleton = () => (
+    <View style={styles.loadingContainer}>
+      <View style={[styles.menuItem, styles.skeletonCard]}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonLine} />
+        <View style={styles.skeletonLine} />
+        <View style={styles.skeletonButtonContainer} />
+      </View>
+      <View style={[styles.menuItem, styles.skeletonCard]}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonLine} />
+        <View style={styles.skeletonLine} />
+        <View style={styles.skeletonButtonContainer} />
       </View>
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={[MyStyles.container, styles.centerContent]}>
-        <Text>Đang tải...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={MyStyles.container}>
-      <Text style={MyStyles.title}>Quản lý Menu</Text>
-      
-      <View style={styles.formContainer}>
-        <TextInput
-          style={MyStyles.input}
-          placeholder="Tên menu"
-          value={newMenu.name}
-          onChangeText={(text) => setNewMenu({ ...newMenu, name: text })}
+    <View style={[MyStyles.container, styles.container]}>
+      <View style={styles.header}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
         />
-        <TextInput
-          style={MyStyles.input}
-          placeholder="Mô tả menu"
-          value={newMenu.description}
-          onChangeText={(text) => setNewMenu({ ...newMenu, description: text })}
-          multiline
-          numberOfLines={3}
-        />
-        <TextInput
-          style={MyStyles.input}
-          placeholder="Thời gian phục vụ (MORNING/NOON/EVENING/NIGHT)"
-          value={newMenu.time_serve}
-          onChangeText={(text) => setNewMenu({ ...newMenu, time_serve: text.toUpperCase() })}
-        />
-        
-        <View style={styles.switchContainer}>
-          <Text>Kích hoạt menu: </Text>
-          <Switch
-            value={newMenu.is_active}
-            onValueChange={(value) => setNewMenu({ ...newMenu, is_active: value })}
-            trackColor={{ false: '#767577', true: '#81b0ff' }}
-            thumbColor={newMenu.is_active ? '#f5dd4b' : '#f4f3f4'}
-          />
-        </View>
-        
-        <Button title="Thêm Menu" onPress={handleAddMenu} />
+        <Title style={styles.title}>Quản lý Menu</Title>
+        <Button
+          mode="contained"
+          onPress={() => navigation.navigate('AddMenu', { restaurantId })}
+          style={styles.actionHeaderButton}
+          labelStyle={styles.buttonLabel}
+          icon="plus"
+          compact
+        >
+          Thêm
+        </Button>
       </View>
-
-      <FlatList
-        data={menus}
-        renderItem={renderMenu}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.menuList}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Không có menu nào</Text>
-        }
-      />
+      {loading && menus.length === 0 ? (
+        renderLoadingSkeleton()
+      ) : (
+        <FlatList
+          data={menus}
+          renderItem={renderMenu}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.listContent}
+          contentContainerStyle={styles.listPadding}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <Paragraph style={styles.emptyText}>Chưa có menu nào</Paragraph>
+          }
+        />
+      )}
+      <Toast />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  formContainer: {
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  menuList: {
+  container: {
     flex: 1,
-    marginTop: 10,
+    backgroundColor: '#f8f9fa',
+    paddingTop: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  backButton: {
+    marginRight: 8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  actionHeaderButton: {
+    borderRadius: 8,
+    backgroundColor: '#6200ee',
+  },
+  buttonLabel: {
+    fontSize: 14,
+    color: '#fff',
+  },
+  listContent: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  listPadding: {
+    paddingBottom: 16,
   },
   menuItem: {
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 12,
     backgroundColor: '#fff',
-    elevation: 2,
+    borderRadius: 12,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   menuHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   menuName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
     flex: 1,
   },
   menuInfo: {
-    fontSize: 14,
-    marginBottom: 5,
-    color: '#666',
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 3,
   },
-  menuStatus: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 10,
+  statusChip: {
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    padding: 8,
   },
-  switchContainer: {
+  actionButton: {
+    marginLeft: 6,
+    marginBottom: 6,
+    borderRadius: 6,
+    borderColor: '#6200ee',
+    minWidth: 80,
+  },
+  actionButtonLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  skeletonCard: {
+    padding: 16,
+  },
+  skeletonTitle: {
+    width: '60%',
+    height: 20,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  skeletonLine: {
+    width: '80%',
+    height: 14,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  skeletonButtonContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 10,
   },
   emptyText: {
     textAlign: 'center',
-    marginTop: 50,
+    marginTop: 40,
     fontSize: 16,
-    color: '#666',
+    color: '#888',
   },
 });
 

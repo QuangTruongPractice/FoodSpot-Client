@@ -255,7 +255,6 @@ const EditFood = ({ navigation, route }) => {
                 : 'image/jpeg'
             });
         }
-        // QUAN TRỌNG: Không gửi originalImageUrl vì nó là string, không phải file object
 
         console.log("🔍 Sending PATCH request with FormData");
 

@@ -37,6 +37,8 @@ export const endpoints = {
   //Menu
   "menus": "/menus/",
   "menus-details": (id) => `/menus/${id}/`,
+  "add-food-to-menu": (id) => `/menus/${id}/add-food/`,
+  "foods-in-menu": (id) => `/menus/${id}/foods/`,
   //Restaurant
   "restaurants": "/restaurants/",
   "restaurant-details": (id) => `/restaurants/${id}/`,
