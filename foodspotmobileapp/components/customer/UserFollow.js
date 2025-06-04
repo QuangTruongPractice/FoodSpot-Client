@@ -13,7 +13,9 @@ const UserFollow = () => {
     const loadData = async () => {
         setLoading(true);
         const token = await checkToken(nav);
-
+        if (!token) {
+            return;
+        }
         try {
             const followRestaurant = await loadUserFollow(token);
             const followedRestaurants = followRestaurant.filter(follow => follow.status === "FOLLOW");

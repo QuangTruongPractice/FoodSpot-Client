@@ -9,6 +9,7 @@ import Cart from "./Cart";
 import RNPickerSelect from 'react-native-picker-select';
 import Swiper from 'react-native-swiper';
 import { getCurrentTimeServe, loadFoodCategory, loadFood } from "../../configs/Data";
+import { Dimensions } from 'react-native';
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
@@ -23,6 +24,9 @@ const Home = () => {
   const nav = useNavigation();
   const [selectedRange, setSelectedRange] = useState(null);
   const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
+  const screenWidth = Dimensions.get('window').width;
+  const numButtons = 4.5; // số lượng nút
+  const buttonWidth = screenWidth / numButtons;
 
   const handleRangeChange = (value) => {
     setSelectedRange(value);
@@ -154,25 +158,25 @@ const Home = () => {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 60 }}>
         <View style={[MyStyles.row, { justifyContent: "space-around" }]}>
           {/* Các nút option */}
-          <TouchableOpacity style={MyStyles.optionButton}
+          <TouchableOpacity style={[MyStyles.optionButton, { width: buttonWidth }]}
           onPress={() => nav.navigate("UserFavorite")}>
             <Icon name="heart-outline" size={20} />
             <Text style={MyStyles.optionText}>Favorites</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={MyStyles.optionButton}
+          <TouchableOpacity style={[MyStyles.optionButton, { width: buttonWidth }]}
             onPress={() => nav.navigate("UserFollow")}>
             <Icon name="account-multiple-outline" size={20} />
             <Text style={MyStyles.optionText}>Following</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={MyStyles.optionButton}
+          <TouchableOpacity style={[MyStyles.optionButton, { width: buttonWidth }]}
             onPress={() => nav.navigate("Order")}>
           <Icon name="cart-outline" size={20} />
           <Text style={MyStyles.optionText}>Orders</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={MyStyles.optionButton}
+          <TouchableOpacity style={[MyStyles.optionButton, { width: buttonWidth }]}
             onPress={() => nav.navigate("Address")}>
             <Icon name="map-marker-outline" size={20} /> 
             <Text style={MyStyles.optionText}>Address</Text>

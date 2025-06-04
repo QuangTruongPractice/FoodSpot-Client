@@ -1,15 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { ActivityIndicator, FlatList, Text, Image, TouchableOpacity, View } from "react-native";
-import { authApis, endpoints } from "../../configs/Apis";
+import { ActivityIndicator, FlatList, Text, Image, TouchableOpacity, View, Modal } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { IconButton } from "react-native-paper"; 
-import Toast from 'react-native-toast-message';
-import { checkToken, getCurrentTimeServe, loadRestaurantDetails, loadFoodDetails,
+import { IconButton, Icon } from "react-native-paper"; 
+import { getCurrentTimeServe, loadRestaurantDetails, loadFoodDetails,
   loadFoodReviews, loadUserFavorite, loadMenu
  } from "../../configs/Data";
 import styles from "../../styles/FoodStyles";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Icon } from "react-native-paper";
+import { toggleFavorite, addFoodToCart } from "../../configs/Action";
 
 const Food = ({ route }) => {
   const { foodId } = route.params; // Lấy foodId từ route.params
@@ -19,10 +17,11 @@ const Food = ({ route }) => {
   const [currentFoodInMenu, setCurrentFoodInMenu] = useState(null);
   const [favStatus, setFavStatus] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [activeTab, setActiveTab] = useState("Các món khác");
+  const [activeTab, setActiveTab] = useState("Món ăn");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const [modalVisible, setModalVisible] = useState(false);
   const nav = useNavigation();
   
   const loadFoodData = async () => {
@@ -106,58 +105,35 @@ const Food = ({ route }) => {
     return () => clearTimeout(timer);
   }, [foodDetails]);
 
-  const handleFavorite = async () => {
-    const token = await checkToken(nav);
-    if (favStatus === "FAVORITE") {
-      await authApis(token).post(endpoints["current-user-favorite"], {
-        food: foodId,
-        status: "CANCEL"
-      });
-        setFavStatus("CANCEL");
-    } else {
-      await authApis(token).post(endpoints["current-user-favorite"], {
-        food: foodId,
-        status: "FAVORITE"
-      });
-      setFavStatus("FAVORITE");
-    } 
+  const handleFavorite = () => {
+    toggleFavorite({ nav, foodId, favStatus, setFavStatus });
   };
 
-  const addToCart = async() => {
-    try {
-      const token = await checkToken(nav);
-      const currentTimeServe = getCurrentTimeServe();
-      await authApis(token).post(endpoints["add-to-cart"], {
-        food_id: foodId,
-        time_serve: currentTimeServe,
-      });
-      Toast.show({
-        type: "success",
-        text1: "Thành công",
-        text2: "Đã thêm vào giỏ hàng!",
-        position: "bottom",
-        visibilityTime: 2000, // 2 giây rồi tự tắt
-      });
-    } catch (error) {
-      console.error("Thêm vào giỏ lỗi:", error);
-      console.error("Thêm vào giỏ lỗi:", error);
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Không thể thêm vào giỏ hàng!",
-        position: "bottom",
-      });
-    }
-  }
-
-  if (loading) {
-    return <ActivityIndicator size="large" />; // Hiển thị loading khi chưa có dữ liệu
-  }
+  // Thêm vào giỏ
+  const handleAddToCart = () => {
+    addFoodToCart({ nav, foodId });
+  };
 
   const renderHeader = () => (
-    <View style={styles.container}>
+    (loading || !foodDetails) ? (
+      <ActivityIndicator size="large" />
+    ) : (
+      <View style={styles.container}>
       {/* Ảnh món ăn chính */}
-      <Image source={{ uri: foodDetails.image }} style={styles.mainImage} />
+      <TouchableOpacity onPress={() => setModalVisible(true)}>
+        <Image source={{ uri: foodDetails?.image }} style={styles.mainImage} />
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent>
+        <View style={{ flex: 1, backgroundColor: 'black', justifyContent: 'center' }}>
+          <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <Image
+              source={{ uri: foodDetails?.image }}
+              style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+            />
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       <View style={styles.foodInfoContainer}>
           <View style={styles.rowBetween}>
@@ -167,15 +143,15 @@ const Food = ({ route }) => {
               onPress={() => handleFavorite()}
             >
               <View style={styles.actionsColumn}>
-              <IconButton
-              icon="heart"
-              size={24}
-              iconColor={favStatus === "FAVORITE" ? "red" : "gold"}
-              containerColor="#ffe6e6"
-              style={{
-                borderRadius: 8,
-              }}
-              />
+                <IconButton
+                icon="heart"
+                size={24}
+                iconColor={favStatus === "FAVORITE" ? "red" : "gold"}
+                containerColor="#ffe6e6"
+                style={{
+                  borderRadius: 8,
+                }}
+                />
               </View>
             </TouchableOpacity>
           </View>
@@ -190,9 +166,8 @@ const Food = ({ route }) => {
         </View>
         </View>
         
-        {/* Nút thêm vào giỏ và đặt hàng */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.buttonAdd} onPress={addToCart}>
+          <TouchableOpacity style={styles.buttonAdd} onPress={handleAddToCart}>
             <View style={{ flexDirection: "row", justifyContent: "center" }}>
               <Icon source="cart" size={20} color="white" style={{ marginRight: 8 }} />
               <Text style={styles.buttonText}>Thêm vào giỏ</Text>
@@ -237,7 +212,7 @@ const Food = ({ route }) => {
             backgroundColor: "#fafafa",
           }}
         >
-          <TouchableOpacity onPress={() => setActiveTab("Các món khác")}>
+          <TouchableOpacity onPress={() => setActiveTab("Món ăn")}>
             <Text style={{
               fontWeight: activeTab === "Món ăn" ? "bold" : "normal",
               color: activeTab === "Món ăn" ? "#e53935" : "#000",
@@ -251,7 +226,7 @@ const Food = ({ route }) => {
           </TouchableOpacity>
         </View>
     </View>
-  );
+  ));
 
   return (
     <>

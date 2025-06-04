@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: "bold", marginBottom: 4 },
   cardAddress: { color: "#555" },
   addBtn: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "#9c27b0", paddingVertical: 14, alignItems: "center" },
-  addBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  addBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginLeft: 5 },
 });
 
 export default styles;

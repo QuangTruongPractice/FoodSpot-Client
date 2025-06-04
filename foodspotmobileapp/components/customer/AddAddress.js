@@ -6,7 +6,7 @@ import MapView, { Marker } from "react-native-maps";
 import { TextInput } from "react-native-paper";
 import { checkToken, loadUser } from "../../configs/Data";
 import styles from "../../styles/AddAddressStyles";
-import { fetchMapboxSuggestions, fetchMapboxPlace } from "../../configs/Map";
+import { fetchMapboxSuggestions, geocodeAddress } from "../../configs/Map";
 
 const AddAddress = () => {
   const nav = useNavigation();
@@ -36,26 +36,61 @@ const AddAddress = () => {
     loadUserData();
   }, []);
 
+  const enhanceQuery = (text) => {
+    if (/^\d+$/.test(text.trim())) {
+      return `${text} đường`;
+    }
+    return text;
+  };
+
   const fetchSuggestions = async (text) => {
+    const enhancedText = enhanceQuery(text);
     setQuery(text);
-    const results = await fetchMapboxSuggestions(text);
+    const results = await fetchMapboxSuggestions(enhancedText);
     setSuggestions(results);
   };
 
-  const handleSelectSuggestion = (item) => {
-    const [longitude, latitude] = item.center;
-    const placeName = item.place_name;
-    setMapRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
-    setForm({ ...form, latitude, longitude, street: placeName });
-    setQuery(placeName);
+  const handleSelectSuggestion = async (item) => {
+    const geo = await geocodeAddress(item.place_name);
+    if (!geo) return;
+
+    const { latitude: lat, longitude: lng, formatted_address } = geo;
+
+    setMapRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      latitude: lat,
+      longitude: lng,
+      street: item.place_name,
+      addressName: formatted_address, // Gán vào ô "Tên địa chỉ"
+    }));
+
+    setQuery(item.place_name);
     setSuggestions([]);
     setShowMap(true);
   };
 
   const handleSubmitEditing = async () => {
     if (!query.trim()) return;
-    const place = await fetchMapboxPlace(query);
-    if (place) handleSelectSuggestion(place);
+
+    const geo = await geocodeAddress(query);
+    if (!geo) return;
+
+    const { latitude, longitude, formatted_address } = geo;
+
+    setMapRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      latitude,
+      longitude,
+      street: query,
+      addressName: formatted_address, // Gán vào ô "Tên địa chỉ"
+    }));
+
+    setSuggestions([]);
+    setShowMap(true);
   };
 
   const handleMarkerDragEnd = (e) => {

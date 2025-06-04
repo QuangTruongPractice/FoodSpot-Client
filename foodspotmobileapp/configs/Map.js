@@ -1,18 +1,50 @@
 import axios from "axios";
 
+const GOMAPS_API_KEY = 'AlzaSygbvzKU5_deWxyDIaFevjN2g1BG_W9VMJB';
 // Hàm chuyển toạ độ sang địa chỉ
 export const reverseGeocode = async (lat, lng) => {
   const url = "https://maps.gomaps.pro/maps/api/geocode/json";
   const params = {
     latlng: `${lat},${lng}`,
     language: "vi",
-    key: "AlzaSygbvzKU5_deWxyDIaFevjN2g1BG_W9VMJB",
+    key: GOMAPS_API_KEY,
   };
 
   const res = await axios.get(url, { params });
   if (res.data.status !== "OK" || res.data.results.length === 0)
     throw new Error("Không tìm thấy địa chỉ!");
   return res.data.results[0].formatted_address;
+};
+
+export const geocodeAddress = async (address) => {
+  try {
+    const response = await axios.get("https://maps.gomaps.pro/maps/api/geocode/json", {
+      params: {
+        address,
+        key: GOMAPS_API_KEY,
+        language: "vi",
+        region: "VN",
+      },
+    });
+
+    const results = response.data.results;
+    if (results.length === 0) {
+      console.warn("Không tìm thấy tọa độ cho địa chỉ này.");
+      return null;
+    }
+
+    const { lat, lng } = results[0].geometry.location;
+    const formatted_address = results[0].formatted_address;
+
+    return {
+      latitude: lat,
+      longitude: lng,
+      formatted_address,
+    };
+  } catch (error) {
+    console.error("Lỗi khi gọi GoMaps Geocoding API:", error.message);
+    return null;
+  }
 };
 
 export const calculateDistance = async (userLat, userLng, restaurantLat, restaurantLng) => {
@@ -55,12 +87,20 @@ export const fetchMapboxSuggestions = async (text, limit = 5, autocomplete = tru
         },
       }
     );
-    return res.data.features;
+
+    // Xử lý xóa mã bưu điện khỏi place_name
+    const cleanedFeatures = res.data.features.map(feature => ({
+      ...feature,
+      place_name: feature.place_name.replace(/,\s?\d{5}/g, ''), // Xóa số có 5 chữ số sau dấu phẩy
+    }));
+
+    return cleanedFeatures;
   } catch (err) {
     console.warn("Lỗi gợi ý địa chỉ:", err);
     return [];
   }
 };
+
 
 export const fetchMapboxPlace = async (text) => {
   if (!text.trim()) return null;

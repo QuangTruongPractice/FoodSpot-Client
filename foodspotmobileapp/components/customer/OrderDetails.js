@@ -1,12 +1,12 @@
 import { Text, View, Image, ScrollView, TextInput, TouchableOpacity, Alert, Modal } from "react-native";
 import { useState, useCallback } from "react";
 import { authApis, endpoints } from '../../configs/Apis';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator } from "react-native";
 import { Icon, Button } from "react-native-paper";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { checkToken, loadOrderDetails, loadUser, loadUserReviewFood } from "../../configs/Data";
 import styles from "../../styles/OrderDetailsStyles";
+import { handleSubmitReview } from "../../configs/Action";
 
 const OrderDetails = ({ route }) => {
     const { orderDetailId } = route.params;
@@ -46,23 +46,9 @@ const OrderDetails = ({ route }) => {
     }
 
     const handleSubmit = async () => {
-        if (!comment || star === 0) {
-          alert("Vui lòng nhập đánh giá và chọn số sao.");
-          return;
-        }
-        const token = await checkToken(nav);
-        const id = await AsyncStorage.getItem("userId");
-        const res = await authApis(token).post(endpoints["reviews-food"], {
-          comment: comment,
-          star: star,
-          order_detail: orderDetailId,
-          user: parseInt(id)
-        });
-        // Thêm đánh giá mới vào đầu danh sách
-        setReviews([res.data, ...reviews]);
-        setComment("");
-        setStar(0);
-      };
+      const token = await checkToken(nav);
+      await handleSubmitReview({ type: "food", id: orderDetailId, token, comment, star, reviews, setComment, setReviews, setStar });
+    };
 
     const handleDelete = async (reviewId) => {
         const token = await checkToken(nav);

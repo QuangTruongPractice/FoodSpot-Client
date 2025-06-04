@@ -13,6 +13,9 @@ const styles = StyleSheet.create({
   errorText: { textAlign: "center", marginTop: 20, color: "#888" },
   emptyText: { textAlign: "center", marginTop: 20, color: "#888" },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 5 },
+  actionButtons: { flexDirection: "row", alignItems: "center", gap: 5 }, // nếu không hoạt động thì dùng marginLeft
+
 });
 
 export default styles;

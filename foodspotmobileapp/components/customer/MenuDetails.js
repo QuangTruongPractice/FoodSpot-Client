@@ -3,6 +3,8 @@ import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, Style
 import { useNavigation } from "@react-navigation/native";
 import { loadMenuDetails } from "../../configs/Data";
 import styles from "../../styles/MenuDetailsStyles";
+import { IconButton } from "react-native-paper"; 
+import { addFoodToCart } from "../../configs/Action";
 
 const MenuDetails = ({ route }) => {
   const { menuId } = route.params;
@@ -25,6 +27,10 @@ const MenuDetails = ({ route }) => {
   useEffect(() => {
     loadMenu();
   }, [menuId]);
+
+  const handleAddToCart = (foodId) => {
+    addFoodToCart({ nav, foodId });
+  };
 
   if (loading)
     return (
@@ -52,7 +58,28 @@ const MenuDetails = ({ route }) => {
             <View style={styles.cardContent}>
               <Text style={styles.foodName}>{item.name}</Text>
               <Text style={styles.foodDesc} numberOfLines={2}>{item.description || "Không có mô tả"}</Text>
-              <Text style={styles.foodPrice}>{item.price ? item.price.toLocaleString() + "đ" : "Đang cập nhật giá"}</Text>
+              <View style={styles.rowBetween}>
+                <Text style={styles.foodPrice}>
+                  {item.price
+                    ? item.price.toLocaleString() + "đ"
+                    : "Đang cập nhật giá"}
+                </Text>
+                <View style={styles.actionButtons}>
+
+                  <TouchableOpacity
+                    style={styles.cartButton}
+                    onPress={() => handleAddToCart(item.id)}
+                  >
+                    <IconButton
+                      icon="cart"
+                      size={24}
+                      iconColor="#fff"
+                      containerColor="#fbc02d"
+                      style={{ borderRadius: 8 }}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </TouchableOpacity>
         )}

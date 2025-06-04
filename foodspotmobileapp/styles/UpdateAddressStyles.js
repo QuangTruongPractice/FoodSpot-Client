@@ -6,6 +6,8 @@ const styles = StyleSheet.create({
   confirmBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   saveBtn: { backgroundColor: "#9c27b0", paddingVertical: 14, alignItems: "center", margin: 5 },
   saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  actionBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", flex: 1, paddingVertical: 12, borderRadius: 8, marginHorizontal: 5 },
+  btnText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginLeft: 5 },
 });
 
 export default styles;

@@ -14,6 +14,9 @@ const UserFavorite = () => {
   const loadData = async () => {
     setLoading(true);
     const token = await checkToken(nav);
+    if (!token) {
+      return;
+    }
     try {
       const favFood = await loadUserFavorite(token);
       const favoriteFoods = favFood.filter(fav => fav.status === "FAVORITE");

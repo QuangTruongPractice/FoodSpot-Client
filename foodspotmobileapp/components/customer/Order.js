@@ -17,17 +17,17 @@ const Order = () => {
     const isFirstPage = page === 1;
     if (isFirstPage) setLoading(true);
     else setLoadingMore(true);
-
-    try {
-      const token = await checkToken(nav);
+    const token = await checkToken(nav);
+    if (!token) {
+      return;
+    }
+    try { 
       const res = await loadOrder(token, { page });
-
       if (isFirstPage) {
         setOrders(res.results);
       } else {
         setOrders((prev) => [...prev, ...res.results]);
       }
-
       if (res.next === null) setPage(0);
     } catch (ex) {
       console.error(ex);
@@ -53,6 +53,8 @@ const Order = () => {
       <Text>Phí ship: {item.shipping_fee.toLocaleString()} VND</Text>
       <Text>Tổng tiền: {item.total.toLocaleString()} VND</Text>
       <Text>Trạng thái: {item.status}</Text>
+      <Text>Phương thức thanh toán: {item.payment_method}</Text>
+      <Text>Trạng thái thanh toán: {item.payment_status}</Text>
     </TouchableOpacity>
   );
 

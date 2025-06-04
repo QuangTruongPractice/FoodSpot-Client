@@ -6,6 +6,7 @@ import MapView, { Marker } from "react-native-maps";
 import { TextInput } from "react-native-paper";
 import { checkToken, loadAddress } from "../../configs/Data";
 import styles from "../../styles/UpdateAddressStyles";
+import { Icon } from "react-native-paper";
 
 const UpdateAddress = () => {
   const navigation = useNavigation();
@@ -120,13 +121,17 @@ const UpdateAddress = () => {
         )}
       </ScrollView>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={onUpdate}>
-        <Text style={styles.saveBtnText}>Cập nhật</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 10 }}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#4caf50" }]} onPress={onUpdate}>
+          <Icon source="content-save-edit" size={18} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.btnText}>Cập nhật</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={onDelete}>
-        <Text style={styles.saveBtnText}>Xóa</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#f44336" }]} onPress={onDelete}>
+          <Icon source="delete" size={18} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.btnText}>Xóa</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

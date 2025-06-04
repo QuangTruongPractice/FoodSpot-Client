@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
   checkoutButton: { backgroundColor: "#FF424E", flex: 1, marginLeft: 5, padding: 15, borderRadius: 10, alignItems: "center" },
   checkoutText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  buttonGroup: { flexDirection: "row", justifyContent: "space-between", padding: 10 },
+  buttonGroup: { flexDirection: "row", justifyContent: "space-between", padding: 10, marginBottom: -50 },
   deleteButton: { backgroundColor: "#aaa", flex: 1, marginRight: 5, padding: 15, borderRadius: 10, alignItems: "center" },
   buttonTextWhite: { color: "#fff", fontSize: 16, fontWeight: "bold" }
 });

@@ -8,6 +8,7 @@ import { Icon } from "react-native-paper";
 import * as ImagePicker from 'expo-image-picker';
 import { authApis, endpoints } from '../../configs/Apis';
 import { checkToken, loadUser } from "../../configs/Data";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Profile = () => {
   const user = useContext(MyUserContext);
@@ -75,7 +76,7 @@ const Profile = () => {
   };
 
   return (
-    <View style={[MyStyles.container, { padding: 20 }]}>
+    <SafeAreaView style={[MyStyles.container, { padding: 20 }]}>
       {loading ? (
         <View style={[MyStyles.container, MyStyles.center]}>
           <ActivityIndicator size="large" color="#e53935" />
@@ -174,7 +175,7 @@ const Profile = () => {
           </Button>
         </Card>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

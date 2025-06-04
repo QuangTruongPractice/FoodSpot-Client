@@ -17,7 +17,7 @@ export function getCurrentTimeServe() {
   if (hour >= 5 && hour < 11) {
     return 'MORNING';
   } else if (hour >= 11 && hour < 13) {
-    return 'NOON';
+    return 'EVENING';
   } else if (hour >= 13 && hour < 23) {
     return 'EVENING';
   } else if (hour >= 23 || hour < 5) {
@@ -26,6 +26,10 @@ export function getCurrentTimeServe() {
     return null;
   }
 }
+
+export const formatCurrency = (num) => {
+  return `${num.toLocaleString('vi-VN')}đ`;
+};
 
 export const loadUser = async (token) => {
   const user = await authApis(token).get(endpoints["current-user"]);

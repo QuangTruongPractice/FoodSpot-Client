@@ -140,6 +140,15 @@ const TabNavigator = () => {
   );
 };
 
+const linking = {
+  prefixes: ['foodspot://'],
+  config: {
+    screens: {
+      Cart: 'cart',
+    },
+  },
+};
+
 const SplashScreen = () => (
   <View style={MyStyles.container}>
     <ActivityIndicator animating={true} size="large" color="#6200EE" />
@@ -185,7 +194,7 @@ const App = () => {
     <PaperProvider>
       <MyUserContext.Provider value={[user, dispatch]}>
         <MyDispatchContext.Provider value={dispatch}>
-          <NavigationContainer ref={navigationRef}>
+          <NavigationContainer ref={navigationRef} linking={linking}>
             <TabNavigator navigation={navigationRef} />
             <StatusBar style="auto" />
             <Toast />

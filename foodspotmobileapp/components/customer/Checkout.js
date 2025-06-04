@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { reverseGeocode, calculateDistance } from '../../configs/Map';
 import { loadRestaurantDetails, checkToken } from '../../configs/Data';
 import styles from "../../styles/CheckoutStyles";
+import { formatCurrency } from '../../configs/Data';
 
 const Checkout = ({ navigation, route }) => {
   const [cartData, setCartData] = useState(() => route.params?.cart || []);
@@ -100,25 +101,21 @@ const Checkout = ({ navigation, route }) => {
             amount: total,
             order_id: orderId
           });
+          console.info(res.data)
           const momoRes = res.data;
           if (momoRes && momoRes.payUrl) {
-            // Mở trang thanh toán MOMO (hoặc WebView)
             Linking.openURL(momoRes.payUrl);
           } else {
             Alert.alert("Lỗi thanh toán MOMO", "Không nhận được URL thanh toán");
           }
         }
       }
-      nav.navigate("Cart"); // hoặc reset giỏ hàng, đưa về trang chính
+      nav.navigate("Cart");
   
     } catch (err) {
       console.error(err);
       Alert.alert("Lỗi", "Không thể đặt hàng. Vui lòng thử lại sau.");
     }
-  };
-
-  const formatCurrency = (num) => {
-    return `${num.toLocaleString('vi-VN')}đ`;
   };
 
   const renderCartItem = (item) => (

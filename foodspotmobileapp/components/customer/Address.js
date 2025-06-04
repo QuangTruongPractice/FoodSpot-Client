@@ -5,6 +5,7 @@ import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/nativ
 import { reverseGeocode } from "../../configs/Map";
 import { checkToken, loadAddressList } from "../../configs/Data";
 import styles from "../../styles/AddressStyles";
+import { Icon } from "react-native-paper";
 
 const Address = () => {
   const [address, setAddress] = useState(null);
@@ -14,9 +15,12 @@ const Address = () => {
   const isSelectMode = route.params?.selectMode === true;
 
   const loadData = async () => {
+    setLoading(true);
+    const token = await checkToken(nav);
+    if (!token) {
+      return;
+    }
     try {
-      setLoading(true);
-      const token = await checkToken(nav);
       const addRes = await loadAddressList(token);
       const list = addRes.addresses || [];
       const formattedAddresses = await Promise.all(
@@ -67,8 +71,11 @@ const Address = () => {
           )}
         />
       )}
-      <TouchableOpacity style={styles.addBtn} onPress={() => nav.navigate("AddAddress")}>
-        <Text style={styles.addBtnText}>Thêm địa chỉ mới</Text>
+      <TouchableOpacity style={[styles.addBtn, { backgroundColor: "#5c6bc0" }]} onPress={() => nav.navigate("AddAddress")}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Icon source="map-marker-plus" size={20} color="white" />
+          <Text style={styles.addBtnText}>Thêm địa chỉ mới</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );

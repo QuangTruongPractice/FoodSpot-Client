@@ -8,6 +8,7 @@ import { getCurrentTimeServe, checkToken, loadRestaurantReviews, loadUser, loadR
   loadRestaurantMenu, loadRestaurantFood, loadUserFollow, checkOrdered
  } from "../../configs/Data";
 import styles from "../../styles/RestaurantStyles";
+import { handleSubmitReview } from "../../configs/Action";
 
 const RestaurantDetails = ({ route }) => {
   const { restaurantId } = route.params;
@@ -25,7 +26,6 @@ const RestaurantDetails = ({ route }) => {
   const [reviews, setReviews] = useState([]);
   const [comment, setComment] = useState("");
   const [star, setStar] = useState(0);
-  const [userId, setUserId] = useState(null);
   const [canReview, setCanReview] = useState(false);
   const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
   const nav = useNavigation();
@@ -102,9 +102,6 @@ const RestaurantDetails = ({ route }) => {
 
       const restaurantRes = await loadRestaurantDetails(restaurantId);
       setRestaurant(restaurantRes);
-
-      const id = await AsyncStorage.getItem("userId");
-      setUserId(id)
     } catch (error) {
       console.error("Error loading restaurant data:", error);
     } finally {
@@ -134,14 +131,14 @@ const RestaurantDetails = ({ route }) => {
 
   useFocusEffect(
     useCallback(() => {
-      const checkTokenAndLoadAuth= async () => {
-        const token = await checkToken(nav);
+      const checkTokenAndLoadAuth = async () => {
+        const token = await AsyncStorage.getItem("access_token");
         if (token) {
           setToken(token)
           await fetchAuthData(token);
           await hasUserOrderedAtRestaurant(token);
         }else {
-          setToken(null)
+          setToken(null);
         }
       };
       fetchData();
@@ -169,6 +166,9 @@ const RestaurantDetails = ({ route }) => {
 
   const handleFollow = async () => {
     const token = await checkToken(nav);
+    if (!token) {
+      return;
+    }
     if (followStatus === "FOLLOW") {
       // Hủy follow
       await authApis(token).post(endpoints["current-user-follow"], {
@@ -186,25 +186,13 @@ const RestaurantDetails = ({ route }) => {
   };
 
   const handleSubmit = async (token) => {
-    if (!comment || star === 0) {
-      alert("Vui lòng nhập đánh giá và chọn số sao.");
-      return;
-    }
-    const res = await authApis(token).post(endpoints["reviews-restaurant"], {
-      comment: comment,
-      star: star,
-      restaurant: restaurantId,
-      user: parseInt(userId)
-    });
-    // Thêm đánh giá mới vào đầu danh sách
-    setReviews([res.data, ...reviews]);
-    setComment("");
-    setStar(0);
+    await handleSubmitReview({ type: "restaurant", id: restaurantId, token, comment, star, reviews, setComment, setReviews, setStar });
   };
 
   const handleDelete = async (token, reviewId) => {
     await authApis(token).delete(endpoints["reviews-restaurant-detail"](reviewId));
     console.log("Đang xóa đánh giá", reviewId);
+    setReviewPage(1);
     await loadReviews();
   };
   
@@ -214,6 +202,7 @@ const RestaurantDetails = ({ route }) => {
     });
     console.log("Cập nhật đánh giá", reviewId, editedComment);
     setModalVisible(false);
+    setReviewPage(1);
     await loadReviews();
   };
 
