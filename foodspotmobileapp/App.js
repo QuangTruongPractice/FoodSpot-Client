@@ -76,8 +76,18 @@ const CartStackNavigator = () => (
 );
 
 const Tab = createBottomTabNavigator();
-const TabNavigator = () => {
+const TabNavigator = ({ navigation }) => {
   const [user] = useContext(MyUserContext);
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === "RESTAURANT_USER") {
+        navigation.navigate("Restaurant", { screen: "RestaurantHome" });
+      } else if (user.role === "customer") {
+        navigation.navigate("Home", { screen: "Home" });
+      }
+    }
+  }, [user, navigation]);
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
@@ -140,15 +150,6 @@ const TabNavigator = () => {
   );
 };
 
-const linking = {
-  prefixes: ['foodspot://'],
-  config: {
-    screens: {
-      Cart: 'cart',
-    },
-  },
-};
-
 const SplashScreen = () => (
   <View style={MyStyles.container}>
     <ActivityIndicator animating={true} size="large" color="#6200EE" />
@@ -194,7 +195,7 @@ const App = () => {
     <PaperProvider>
       <MyUserContext.Provider value={[user, dispatch]}>
         <MyDispatchContext.Provider value={dispatch}>
-          <NavigationContainer ref={navigationRef} linking={linking}>
+          <NavigationContainer ref={navigationRef}>
             <TabNavigator navigation={navigationRef} />
             <StatusBar style="auto" />
             <Toast />

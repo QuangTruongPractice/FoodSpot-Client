@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { checkToken, loadCart, loadSubCart } from "../../configs/Data";
 import styles from "../../styles/CartStyles";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { formatCurrency } from '../../configs/Data';
 
 const Cart = () => {
   const [subCarts, setSubCarts] = useState([]);
@@ -187,7 +188,7 @@ const Cart = () => {
             <Text numberOfLines={1} style={styles.foodName}>
               {subItem.food.name}
             </Text>
-            <Text style={styles.price}>{subItem.price}đ</Text>
+            <Text style={styles.price}>{formatCurrency(subItem.price)}</Text>
           </View>
 
           <View style={styles.quantityControls}>
@@ -211,7 +212,7 @@ const Cart = () => {
         </View>
       ))}
 
-      <Text style={styles.totalPriceText}>Tổng: {item.total_price}đ</Text>
+      <Text style={styles.totalPriceText}>Tổng: {formatCurrency(item.total_price)}</Text>
     </View>
   );
 

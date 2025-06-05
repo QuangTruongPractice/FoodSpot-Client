@@ -51,14 +51,6 @@ const Login = () => {
           payload: userRes,
         });
 
-        const userRole = userRes.role;
-        if (userRole === "CUSTOMER") {
-          nav.navigate("Home");
-        } else if (userRole === "RESTAURANT_USER") {
-          nav.navigate("Restaurant", { screen: "RestaurantHome" });
-        } else {
-          setMsg("Vai trò không hợp lệ!");
-        }
       } catch (ex) {
         console.error("Lỗi đăng nhập:", ex.response?.data || ex.message);
         setMsg(

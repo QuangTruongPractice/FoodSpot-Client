@@ -42,7 +42,7 @@ export const addFoodToCart = async ({ nav, foodId }) => {
       type: "success",
       text1: "Thành công",
       text2: "Đã thêm vào giỏ hàng!",
-      position: "bottom",
+      position: "top",
       visibilityTime: 2000,
     });
   } catch (error) {
@@ -51,7 +51,7 @@ export const addFoodToCart = async ({ nav, foodId }) => {
       type: "error",
       text1: "Lỗi",
       text2: "Không thể thêm vào giỏ hàng!",
-      position: "bottom",
+      position: "top",
     });
   }
 };
