@@ -63,7 +63,8 @@ const Home = () => {
 
   const loadCates = async () => {
     let res = await loadFoodCategory();
-    setCategories(res.results);
+    setCategories(res);
+    console.info(res)
   };
 
   const loadFoods = async () => {
