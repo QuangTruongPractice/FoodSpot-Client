@@ -10,6 +10,8 @@ export const endpoints = {
     'orders-detail': (id) => `/order-detail/${id}/`,
     'checkout': '/orders/checkout/',
     'check-ordered': 'check-ordered',
+    "by-order": (orderId) => `/order-detail/by-order/${orderId}/`,
+    "orders-current-restaurant": "/orders/current-restaurant-orders/",
 
     //payment
     'momo-payment': '/momo-payment/',
@@ -18,6 +20,9 @@ export const endpoints = {
     'foods': '/foods/',
     'food-details': (foodId) => `/foods/${foodId}/`,
     'food-reviews': (foodId) => `/foods/${foodId}/reviews/`,
+    "food-add-price": (foodId) => `/foods/${foodId}/add_price/`,
+    "food-update-price": (foodId) => `/foods/${foodId}/update_price/`,
+    "food-delete-price": (foodId) => `/foods/${foodId}/delete_price/`,
     
     //User
     'current-user': '/users/current-user/',
@@ -28,6 +33,8 @@ export const endpoints = {
     //Menu
     'menus': '/menus/',
     'menus-details': (id) => `/menus/${id}/`,
+    "add-food-to-menu": (id) => `/menus/${id}/add-food/`,
+    "foods-in-menu": (id) => `/menus/${id}/foods/`,
     //Restaurant
     'restaurants':'/restaurants/',
     'restaurant-details': (id) => `/restaurants/${id}/`,

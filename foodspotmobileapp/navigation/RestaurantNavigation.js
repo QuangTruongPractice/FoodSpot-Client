@@ -1,13 +1,18 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import RestaurantHome from "../components/Restaurant/RestaurantHome";
-import AddFood from "../components/Restaurant/AddFood";
-import EditFood from "../components/Restaurant/EditFood";
-import DeleteFood from "../components/Restaurant/DeleteFood";
-import ToggleAvailability from "../components/Restaurant/ToggleAvailability";
-import ManageRestaurant from "../components/Restaurant/ManageRestaurant";
-import ManageOrders from "../components/Restaurant/ManageOrders";
-import ManageMenus from "../components/Restaurant/ManageMenus";
-import FoodManagement from "../components/Restaurant/FoodManagement";
+import RestaurantHome from "../components/restaurant/RestaurantHome";
+import AddFood from "../components/restaurant/AddFood";
+import EditFood from "../components/restaurant/EditFood";
+import DeleteFood from "../components/restaurant/DeleteFood";
+import ToggleAvailability from "../components/restaurant/ToggleAvailability";
+import ManageRestaurant from "../components/restaurant/ManageRestaurant";
+import ManageOrders from "../components/restaurant/ManageOrders";
+import ManageMenus from "../components/restaurant/ManageMenus";
+import FoodManagement from "../components/restaurant/FoodManagement";
+import OrderDetails from "../components/restaurant/OrderDetails";
+import AddFoodInMenu from "../components/restaurant/AddFoodInMenu";
+import EditMenu from "../components/restaurant/EditMenu";
+import MenuDetails from "../components/restaurant/MenuDetails";
+import AddMenu from "../components/restaurant/AddMenu";
 
 const RestaurantStack = createNativeStackNavigator();
 
@@ -17,7 +22,7 @@ const RestaurantNavigation = () => (
       headerStyle: { backgroundColor: "#6200ee" },
       headerTintColor: "#fff",
       headerTitleStyle: { fontWeight: "bold" },
-      headerShown: true, // Bật header để hiển thị tiêu đề
+      headerShown: true,
     }}
   >
     <RestaurantStack.Screen
@@ -64,6 +69,31 @@ const RestaurantNavigation = () => (
       name="ManageMenus"
       component={ManageMenus}
       options={{ title: "Quản lý Menu" }}
+    />
+    <RestaurantStack.Screen
+      name="OrderDetails"
+      component={OrderDetails}
+      options={{ title: "Chi tiết Đơn hàng" }}
+    />
+    <RestaurantStack.Screen
+      name="AddFoodInMenu"
+      component={AddFoodInMenu}
+      options={{ title: "Thêm Món ăn vào Menu" }}
+    />
+    <RestaurantStack.Screen
+      name="EditMenu"
+      component={EditMenu}
+      options={{ title: "Chỉnh sửa Menu" }}
+    />
+    <RestaurantStack.Screen
+      name="MenuDetails"
+      component={MenuDetails}
+      options={{ title: "Chi tiết Menu" }}
+    />
+    <RestaurantStack.Screen
+      name="AddMenu"
+      component={AddMenu}
+      options={{ title: "Thêm menu mới" }}
     />
   </RestaurantStack.Navigator>
 );
