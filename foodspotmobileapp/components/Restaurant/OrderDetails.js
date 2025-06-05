@@ -159,6 +159,7 @@ const OrderDetails = () => {
       case 'ACCEPTED': return '#2196F3';
       case 'DELIVERED': return '#4CAF50';
       case 'CANCEL': return '#F44336';
+      case 'FAIL': return '#B0BEC5';
       default: return '#757575';
     }
   };
@@ -169,10 +170,10 @@ const OrderDetails = () => {
       case 'ACCEPTED': return 'Đã chấp nhận';
       case 'DELIVERED': return 'Đã giao hàng';
       case 'CANCEL': return 'Đã hủy';
+      case 'FAIL': return 'Thất bại';
       default: return String(status || 'N/A');
     }
   };
-
   const getTimeServeText = (timeServe) => {
     switch (timeServe) {
       case 'MORNING': return 'Sáng';

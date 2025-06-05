@@ -198,11 +198,10 @@ const AddFood = ({ navigation, route }) => {
         form.append("image", {
           uri: foodData.image.uri,
           name: foodData.image.fileName,
-          type: foodData.image.type && foodData.image.type.startsWith('image/')
-          ? foodData.image.type
+          type: user.avatar.type && user.avatar.type.startsWith('image/')
+          ? user.avatar.type
           : 'image/jpeg'
         });
-        console.info(foodData.image.type)
       }
 
       console.log("Creating food with FormData");

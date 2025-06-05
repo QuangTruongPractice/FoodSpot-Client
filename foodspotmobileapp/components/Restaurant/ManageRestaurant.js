@@ -285,7 +285,6 @@ const ManageRestaurant = () => {
       const authApi = authApis(token);
       const response = await authApi.get(endpoints["restaurant-details"](restaurantId));
       setRestaurantData(response.data);
-      console.info(response.data)
       setAddressQuery(response.data.address.name || "");
     } catch (ex) {
       let errorMessage = ex.response?.data?.error || ex.message || "Không thể tải thông tin nhà hàng!";
@@ -524,8 +523,8 @@ const ManageRestaurant = () => {
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         <Title style={styles.subtitle}>Ảnh đại diện</Title>
-        {restaurantData.avatar ? (
-          <Image source={{ uri: restaurantData.avatar }} style={styles.avatar} />
+        {restaurantData.avatar?.uri ? (
+          <Image source={{ uri: restaurantData.avatar.uri }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text>Chưa có ảnh</Text>

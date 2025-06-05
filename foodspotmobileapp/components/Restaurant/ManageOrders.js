@@ -88,6 +88,7 @@ const ManageOrders = ({ route }) => {
       case 'ACCEPTED': return '#2196F3';
       case 'DELIVERED': return '#4CAF50';
       case 'CANCEL': return '#F44336';
+      case 'FAIL': return '#B0BEC5'; // Màu xám cho trạng thái FAIL
       default: return '#757575';
     }
   };
@@ -98,6 +99,7 @@ const ManageOrders = ({ route }) => {
       case 'ACCEPTED': return 'Đã chấp nhận';
       case 'DELIVERED': return 'Đã giao hàng';
       case 'CANCEL': return 'Đã hủy';
+      case 'FAIL': return 'Thất bại';
       default: return status;
     }
   };
@@ -108,6 +110,7 @@ const ManageOrders = ({ route }) => {
       case 'ACCEPTED': return 'check-circle';
       case 'DELIVERED': return 'local-shipping';
       case 'CANCEL': return 'cancel';
+      case 'FAIL': return 'error'; 
       default: return 'help';
     }
   };
@@ -135,12 +138,13 @@ const ManageOrders = ({ route }) => {
 
   const renderFilterChips = () => {
     const filters = [
-      { key: 'ALL', label: 'Tất cả' },
-      { key: 'PENDING', label: 'Chờ xử lý' },
-      { key: 'ACCEPTED', label: 'Đã chấp nhận' },
-      { key: 'DELIVERED', label: 'Đã giao' },
-      { key: 'CANCEL', label: 'Đã hủy' }
-    ];
+        { key: 'ALL', label: 'Tất cả' },
+        { key: 'PENDING', label: 'Chờ xử lý' },
+        { key: 'ACCEPTED', label: 'Đã chấp nhận' },
+        { key: 'DELIVERED', label: 'Đã giao' },
+        { key: 'CANCEL', label: 'Đã hủy' },
+        { key: 'FAIL', label: 'Thất bại' },
+      ];
 
     return (
       <View style={styles.filterContainer}>

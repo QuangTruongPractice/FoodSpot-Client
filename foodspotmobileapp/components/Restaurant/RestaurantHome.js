@@ -1,3 +1,4 @@
+// components/restaurant/RestaurantHome.js
 import React, { useEffect, useState, useContext } from "react";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import { Button, Card, Title, Paragraph, ActivityIndicator } from "react-native-paper";
@@ -70,6 +71,10 @@ const RestaurantHome = () => {
     navigation.navigate("Restaurant", { screen, params: { restaurantId } });
   };
 
+  const navigateToRevenueScreen = (screen, restaurantId) => {
+    navigation.navigate(screen, { restaurantId });
+  };
+
   if (loading) {
     return (
       <View style={MyStyles.container}>
@@ -102,7 +107,6 @@ const RestaurantHome = () => {
             <Paragraph>Xem, thêm, sửa hoặc xóa món ăn.</Paragraph>
           </Card.Content>
         </Card>
- UB
         <Card
           style={styles.card}
           onPress={() => navigateTo("ManageRestaurant", restaurant.id)}
@@ -128,6 +132,33 @@ const RestaurantHome = () => {
           <Card.Content>
             <Title>Quản lý menu</Title>
             <Paragraph>Thêm, chỉnh sửa hoặc xóa menu.</Paragraph>
+          </Card.Content>
+        </Card>
+        <Card
+          style={styles.card}
+          onPress={() => navigateToRevenueScreen("RevenueStatistics", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Thống kê doanh thu tổng hợp</Title>
+            <Paragraph>Xem doanh thu tổng hợp.</Paragraph>
+          </Card.Content>
+        </Card>
+        <Card
+          style={styles.card}
+          onPress={() => navigateToRevenueScreen("FoodRevenue", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Thống kê doanh thu theo món ăn</Title>
+            <Paragraph>Xem doanh thu theo từng món ăn.</Paragraph>
+          </Card.Content>
+        </Card>
+        <Card
+          style={styles.card}
+          onPress={() => navigateToRevenueScreen("CategoryRevenue", restaurant.id)}
+        >
+          <Card.Content>
+            <Title>Thống kê doanh thu theo danh mục</Title>
+            <Paragraph>Xem doanh thu theo từng danh mục.</Paragraph>
           </Card.Content>
         </Card>
       </View>

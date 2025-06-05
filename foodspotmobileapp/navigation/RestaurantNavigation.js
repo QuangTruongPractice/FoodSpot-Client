@@ -13,6 +13,9 @@ import AddFoodInMenu from "../components/restaurant/AddFoodInMenu";
 import EditMenu from "../components/restaurant/EditMenu";
 import MenuDetails from "../components/restaurant/MenuDetails";
 import AddMenu from "../components/restaurant/AddMenu";
+import RevenueStatisticsScreen from "../components/restaurant/RevenueStatisticsScreen";
+import FoodRevenueScreen from "../components/restaurant/FoodRevenueScreen";
+import CategoryRevenueScreen from "../components/restaurant/CategoryRevenueScreen";
 
 const RestaurantStack = createNativeStackNavigator();
 
@@ -94,6 +97,21 @@ const RestaurantNavigation = () => (
       name="AddMenu"
       component={AddMenu}
       options={{ title: "Thêm menu mới" }}
+    />
+    <RestaurantStack.Screen
+      name="RevenueStatistics"
+      component={RevenueStatisticsScreen}
+      options={{ title: "Thống Kê Doanh Thu Tổng Hợp" }}
+    />
+    <RestaurantStack.Screen
+      name="FoodRevenue"
+      component={FoodRevenueScreen}
+      options={{ title: "Thống Kê Doanh Thu Theo Món Ăn" }}
+    />
+    <RestaurantStack.Screen
+      name="CategoryRevenue"
+      component={CategoryRevenueScreen}
+      options={{ title: "Thống Kê Doanh Thu Theo Danh Mục" }}
     />
   </RestaurantStack.Navigator>
 );

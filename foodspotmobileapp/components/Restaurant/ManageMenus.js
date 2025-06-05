@@ -167,7 +167,7 @@ const ManageMenus = ({ route, navigation }) => {
       <Card.Actions style={styles.buttonContainer}>
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate('AddFoodInMenu', { menuId: item.id, restaurantId })}
+          onPress={() => navigation.navigate('AddMenuFood', { menuId: item.id, restaurantId })}
           style={styles.actionButton}
           labelStyle={styles.actionButtonLabel}
           compact
