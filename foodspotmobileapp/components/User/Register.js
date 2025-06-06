@@ -48,7 +48,7 @@ const Register = () => {
         first_name: "",
         last_name: "",
         phone_number: "",
-        avatar: null
+        image: null
     });
     const [msg, setMsg] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ const Register = () => {
         });
 
         if (!result.canceled) {
-            setState(result.assets[0], "avatar");
+            setState(result.assets[0], "image");
             Toast.show({
                 type: "success",
                 text1: "Thành công",
@@ -117,13 +117,14 @@ const Register = () => {
                 form.append("phone_number", user.phone_number || "");
                 form.append("role", "CUSTOMER");
 
-                if (user.avatar) {
-                    form.append('avatar', {
-                        uri: user.avatar.uri,
-                        name: user.avatar.fileName || 'avatar.jpg',
-                        type: user.avatar.type && user.avatar.type.startsWith('image/')
-                        ? user.avatar.type
+                if (user.image) {
+                    form.append('image', {
+                        uri: user.image.uri,
+                        name: user.image.fileName || 'image.jpg',
+                        type: user.image.type && user.image.type.startsWith('image/')
+                        ? user.image.type
                         : 'image/jpeg'
+                        
                     });
                 }
 
@@ -208,10 +209,10 @@ const Register = () => {
                         <Text style={{ color: loading ? "#888" : "blue" }}>Chọn ảnh đại diện...</Text>
                     </TouchableOpacity>
 
-                    {user.avatar && (
+                    {user.image && (
                         <Image
-                            style={[MyStyles.avatar, MyStyles.margin, { width: 100, height: 100 }]}
-                            source={{ uri: user.avatar.uri }}
+                            style={[MyStyles.image, MyStyles.margin, { width: 100, height: 100 }]}
+                            source={{ uri: user.image.uri }}
                         />
                     )}
 

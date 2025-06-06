@@ -63,7 +63,7 @@ const UserFollow = () => {
             {item && (
                 <TouchableOpacity onPress={() => nav.navigate("RestaurantDetails", { restaurantId: item.id })}>
                     <View style={styles.itemContainer}>
-                        <Image source={{ uri: item.avatar || "https://picsum.photos/200" }} style={styles.avatar} />
+                        <Image source={{ uri: item.image || "https://picsum.photos/200" }} style={styles.avatar} />
                         <View style={styles.infoContainer}>
                             <Text style={styles.name}>{item.name}</Text>
                             <View style={styles.ratingRow}>

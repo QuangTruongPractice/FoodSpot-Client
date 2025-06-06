@@ -95,7 +95,7 @@ const OrderDetails = ({ route }) => {
             <View style={styles.container}>
               <Image
                 source={{
-                  uri: currentUser.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  uri: currentUser.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                 }}
                 style={styles.reviewsAvatar}
               />
@@ -138,7 +138,7 @@ const OrderDetails = ({ route }) => {
                     <View style={styles.reviewMain}>
                       <Image
                         source={{
-                          uri: item.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                          uri: item.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                         }}
                         style={styles.reviewsAvatar}
                       />
@@ -187,7 +187,7 @@ const OrderDetails = ({ route }) => {
                           <View key={index} style={styles.replyItem}>
                             <Image
                               source={{
-                                uri: reply.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                                uri: reply.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                               }}
                               style={styles.replyAvatar}
                             />

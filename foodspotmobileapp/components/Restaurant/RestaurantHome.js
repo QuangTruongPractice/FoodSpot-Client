@@ -163,13 +163,6 @@ const RestaurantHome = () => {
         </Card>
       </View>
 
-      <Button
-        mode="contained"
-        style={[MyStyles.margin, styles.logoutButton]}
-        onPress={handleLogout}
-      >
-        Đăng xuất
-      </Button>
     </ScrollView>
   );
 };

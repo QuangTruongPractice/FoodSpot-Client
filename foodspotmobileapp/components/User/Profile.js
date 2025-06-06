@@ -18,7 +18,7 @@ const Profile = () => {
   const [editingPhone, setEditingPhone] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [avatar, setAvatar] = useState(user[0]?.avatar || "");
+  const [image, setImage] = useState(user[0]?.image || "");
   const [loading, setLoading] = useState(false);
 
   const logout = async () => {
@@ -39,9 +39,14 @@ const Profile = () => {
     });
 
     if (!result.canceled && result.assets?.[0]?.uri) {
-      setAvatar(result.assets[0].uri);
-      console.log("Ảnh mới đã chọn:", result.assets[0].uri);
-      handleEdit("avatar", result.assets[0].uri);
+      const asset = result.assets[0];
+      setImage(asset.uri);
+      console.log("Ảnh mới đã chọn:", asset.uri);
+
+      handleEdit("image", {
+        uri: asset.uri,
+        type: asset.type ?? 'image/jpeg',
+      });
     }
   };
 
@@ -61,10 +66,25 @@ const Profile = () => {
     setLoading(true);
     try {
       const token = await checkToken();
-      const data = {};
-      data[field] = editedData;
+      const formData = new FormData();
+      if (field === "image") {
+        const { uri, type } = editedData;
+        const fileName = uri.split('/').pop();
 
-      await authApis(token).patch(endpoints["current-user"], data);
+        formData.append("image", {
+          uri: uri,
+          name: fileName,
+          type: type && type.startsWith('image/') ? type : 'image/jpeg',
+        });
+      } else {
+        formData.append(field, editedData);
+      }
+
+      await authApis(token).patch(endpoints["current-user"], formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       let userRes = await loadUser(token);
 
       dispatch({ type: "login", payload: userRes });
@@ -87,7 +107,7 @@ const Profile = () => {
           <View style={{ alignItems: "center", marginBottom: 20 }}>
             <TouchableOpacity onPress={pickImage}>
               <Image
-                source={{ uri: avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
+                source={{ uri: image || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
                 style={{
                   width: 100,
                   height: 100,

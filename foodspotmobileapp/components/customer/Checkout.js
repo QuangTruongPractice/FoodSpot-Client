@@ -7,6 +7,7 @@ import { reverseGeocode, calculateDistance } from '../../configs/Map';
 import { loadRestaurantDetails, checkToken } from '../../configs/Data';
 import styles from "../../styles/CheckoutStyles";
 import { formatCurrency } from '../../configs/Data';
+import Toast from 'react-native-toast-message';
 
 const Checkout = ({ navigation, route }) => {
   const [cartData, setCartData] = useState(() => route.params?.cart || []);
@@ -77,9 +78,14 @@ const Checkout = ({ navigation, route }) => {
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
-      Alert.alert('Vui lòng chọn địa chỉ giao hàng');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng chọn địa chỉ giao hàng',
+      });
       return;
     }
+
     try {
       const token = await checkToken(nav);
       for (const store of cartData) {
@@ -90,31 +96,44 @@ const Checkout = ({ navigation, route }) => {
           total_price: store.total_price + store.shipping_fee,
           ship_address_id: selectedAddress.id || 'Không xác định'
         };
-        //Tạo order
+
         const checkoutRes = await authApis(token).post(endpoints["checkout"], orderData);
         const orderId = checkoutRes.data?.order_id;
+
         if (paymentMethod === "COD") {
-          Alert.alert('Đặt hàng thành công', `Phương thức: ${paymentMethod}`);
+          Toast.show({
+            type: 'success',
+            text1: 'Đặt hàng thành công',
+            text2: `Phương thức: ${paymentMethod}`,
+          });
         }
+
         if (paymentMethod === "MOMO") {
           const res = await authApis(token).post(endpoints["momo-payment"], {
             amount: total,
             order_id: orderId
           });
-          console.info(res.data)
           const momoRes = res.data;
-          if (momoRes && momoRes.payUrl) {
-            Linking.openURL(momoRes.payUrl);
+          if (momoRes && momoRes.deeplink) {
+            Linking.openURL(momoRes.deeplink); // ưu tiên mở app MoMo nếu có deeplink
           } else {
-            Alert.alert("Lỗi thanh toán MOMO", "Không nhận được URL thanh toán");
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi thanh toán MOMO',
+              text2: 'Không nhận được URL thanh toán',
+            });
           }
         }
+        nav.navigate("Cart");
       }
-      nav.navigate("Cart");
-  
+
     } catch (err) {
       console.error(err);
-      Alert.alert("Lỗi", "Không thể đặt hàng. Vui lòng thử lại sau.");
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể đặt hàng. Vui lòng thử lại sau.',
+      });
     }
   };
 

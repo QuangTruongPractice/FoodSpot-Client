@@ -523,8 +523,8 @@ const ManageRestaurant = () => {
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         <Title style={styles.subtitle}>Ảnh đại diện</Title>
-        {restaurantData.avatar?.uri ? (
-          <Image source={{ uri: restaurantData.avatar.uri }} style={styles.avatar} />
+        {restaurantData.avatar ? (
+          <Image source={{ uri: restaurantData.avatar }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text>Chưa có ảnh</Text>

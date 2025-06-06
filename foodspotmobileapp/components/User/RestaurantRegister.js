@@ -23,7 +23,7 @@ const RestaurantRegister = () => {
     first_name: "",
     last_name: "",
     phone_number: "",
-    avatar: null,
+    image: null,
     restaurant_name: ""
   })
   const [msg, setMsg] = useState(null)
@@ -50,7 +50,7 @@ const RestaurantRegister = () => {
     })
 
     if (!result.canceled) {
-      setState(result.assets[0], "avatar")
+      setState(result.assets[0], "image")
       Toast.show({
         type: "success",
         text1: "Thành công",
@@ -94,12 +94,12 @@ const RestaurantRegister = () => {
         form.append("role", "RESTAURANT_USER")
         form.append("restaurant_name", user.restaurant_name)
 
-        if (user.avatar) {
-            form.append('avatar', {
-                uri: user.avatar.uri,
-                name: user.avatar.fileName || 'avatar.jpg',
-                type: user.avatar.type && user.avatar.type.startsWith('image/')
-                ? user.avatar.type
+        if (user.image) {
+            form.append('image', {
+                uri: user.image.uri,
+                name: user.image.fileName || 'image.jpg',
+                type: user.image.type && user.image.type.startsWith('image/')
+                ? user.image.type
                 : 'image/jpeg'
             });
         }
@@ -193,10 +193,10 @@ const RestaurantRegister = () => {
             <Text style={{ color: loading ? "#888" : "blue" }}>Chọn ảnh đại diện...</Text>
           </TouchableOpacity>
 
-          {user.avatar && (
+          {user.image && (
             <Image
-              style={[MyStyles.avatar, MyStyles.margin, { width: 100, height: 100 }]}
-              source={{ uri: user.avatar.uri }}
+              style={[MyStyles.image, MyStyles.margin, { width: 100, height: 100 }]}
+              source={{ uri: user.image.uri }}
             />
           )}
 

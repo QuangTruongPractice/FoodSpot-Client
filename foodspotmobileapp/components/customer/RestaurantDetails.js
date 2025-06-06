@@ -213,7 +213,7 @@ const RestaurantDetails = ({ route }) => {
       {restaurant && (
         <View style={styles.restaurantCard}>
             <Image
-            source={{ uri: restaurant.avatar || "https://picsum.photos/200" }}
+            source={{ uri: restaurant.image || "https://picsum.photos/200" }}
             style={styles.restaurantAvatar}
             />
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -337,7 +337,7 @@ const RestaurantDetails = ({ route }) => {
             <View style={styles.container}>
               <Image
                 source={{
-                  uri: currentUser.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  uri: currentUser.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                 }}
                 style={styles.reviewsAvatar}
               />
@@ -376,7 +376,7 @@ const RestaurantDetails = ({ route }) => {
                 <Image
                   source={{
                     uri:
-                      item.avatar ||
+                      item.image ||
                       "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                   }}
                   style={styles.reviewsAvatar}

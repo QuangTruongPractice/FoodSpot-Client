@@ -182,7 +182,7 @@ const Food = ({ route }) => {
               style={{ flexDirection: "row", flex: 1 }}
             >
               <Image
-                source={{ uri: restaurant.avatar || "https://picsum.photos/400/200" }}
+                source={{ uri: restaurant.image || "https://picsum.photos/400/200" }}
                 style={styles.restaurantAvatar}
               />
               <View style={{ flex: 1, marginLeft: 10 }}>
@@ -240,7 +240,7 @@ const Food = ({ route }) => {
             <View style={styles.reviewsContainer}>
               <Image
                 source={{
-                  uri: item.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+                  uri: item.image || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
                 }}
                 style={styles.reviewsAvatar}
               />
