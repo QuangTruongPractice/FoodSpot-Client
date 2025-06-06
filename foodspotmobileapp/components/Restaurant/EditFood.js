@@ -250,8 +250,8 @@ const EditFood = ({ navigation, route }) => {
             form.append("image", {
                 uri: foodData.image.uri,
                 name: foodData.image.fileName,
-                type: user.avatar.type && user.avatar.type.startsWith('image/')
-                ? user.avatar.type
+                type: foodData.image.type && foodData.image.type.startsWith('image/')
+                ? foodData.image.type
                 : 'image/jpeg'
             });
         }

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useContext } from "react";
 import { View, ScrollView, StyleSheet, Image, TouchableOpacity, Text, Alert } from "react-native";
 import { TextInput, Button, Title, ActivityIndicator, Card } from "react-native-paper";
@@ -99,27 +98,6 @@ const searchAddressMultiple = async (query) => {
   }
 };
 
-const calculateDistance = async (userLat, userLng, restaurantLat, restaurantLng) => {
-  try {
-    const res = await axios.get(
-      `https://router.project-osrm.org/route/v1/driving/${restaurantLng},${restaurantLat};${userLng},${userLat}?overview=false`
-    );
-    if (res.data.code === "Ok") {
-      const route = res.data.routes[0];
-      return {
-        distance: route.distance,
-        duration: route.duration
-      };
-    } else {
-      console.warn("Không thể tính khoảng cách");
-      return null;
-    }
-  } catch (err) {
-    console.error("Lỗi khi tính khoảng cách:", err);
-    return null;
-  }
-};
-
 const ManageRestaurant = () => {
   const [restaurantData, setRestaurantData] = useState({
     name: "",
@@ -130,12 +108,11 @@ const ManageRestaurant = () => {
   });
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false); // Separate loading state for search
+  const [searchLoading, setSearchLoading] = useState(false);
   const [addressQuery, setAddressQuery] = useState("");
   const [userLocation, setUserLocation] = useState(null);
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [distanceInfo, setDistanceInfo] = useState(null);
   
   const navigation = useNavigation();
   const route = useRoute();
@@ -165,48 +142,11 @@ const ManageRestaurant = () => {
       const location = await Location.getCurrentPositionAsync({});
       setUserLocation(location.coords);
       
-      if (restaurantData.address.latitude && restaurantData.address.longitude) {
-        calculateDistanceToRestaurant(location.coords.latitude, location.coords.longitude);
-      }
-      
       Toast.show({ type: "success", text1: "Thành công", text2: "Đã lấy vị trí hiện tại!" });
     } catch (ex) {
       Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể lấy vị trí hiện tại!" });
     } finally {
       setLocationLoading(false);
-    }
-  };
-
-  // Tính khoảng cách
-  const calculateDistanceToRestaurant = async (userLat, userLng) => {
-    if (!restaurantData.address.latitude || !restaurantData.address.longitude) {
-      Toast.show({ type: "error", text1: "Lỗi", text2: "Chưa có tọa độ nhà hàng!" });
-      return;
-    }
-
-    try {
-      const result = await calculateDistance(
-        userLat, 
-        userLng, 
-        restaurantData.address.latitude, 
-        restaurantData.address.longitude
-      );
-      
-      if (result) {
-        setDistanceInfo({
-          distance: (result.distance / 1000).toFixed(2),
-          duration: Math.ceil(result.duration / 60),
-          shippingFee: restaurantData.shipping_fee_per_km ? 
-            (result.distance / 1000 * parseFloat(restaurantData.shipping_fee_per_km)).toFixed(0) : 0
-        });
-        Toast.show({ 
-          type: "success", 
-          text1: "Thành công", 
-          text2: `Khoảng cách: ${(result.distance / 1000).toFixed(2)} km` 
-        });
-      }
-    } catch (ex) {
-      Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể tính khoảng cách!" });
     }
   };
 
@@ -308,15 +248,9 @@ const ManageRestaurant = () => {
   // Cập nhật giá trị trường
   const handleInputChange = (field, value) => {
     setRestaurantData({ ...restaurantData, [field]: value });
-    if (field === "shipping_fee_per_km" && distanceInfo) {
-      setDistanceInfo({
-        ...distanceInfo,
-        shippingFee: value ? (distanceInfo.distance * parseFloat(value)).toFixed(0) : 0
-      });
-    }
   };
 
-  // Tìm kiếm địa chỉ với debounce - FIXED VERSION
+  // Tìm kiếm địa chỉ với debounce
   const searchAddress = debounce(async (query) => {
     if (!query || query.trim().length < 3) {
       setShowSuggestions(false);
@@ -325,7 +259,7 @@ const ManageRestaurant = () => {
     }
 
     try {
-      setSearchLoading(true); // Use separate loading state
+      setSearchLoading(true);
       const results = await searchAddressMultiple(query);
       if (results && results.length > 0) {
         setAddressSuggestions(results.sort((a, b) => b.importance - a.importance));
@@ -340,9 +274,9 @@ const ManageRestaurant = () => {
       setShowSuggestions(false);
       setAddressSuggestions([]);
     } finally {
-      setSearchLoading(false); // Use separate loading state
+      setSearchLoading(false);
     }
-  }, 800); // Increase debounce time to 800ms
+  }, 800);
 
   // Handle manual search button press
   const handleManualSearch = async () => {
@@ -353,9 +287,8 @@ const ManageRestaurant = () => {
     searchAddress(addressQuery);
   };
 
-  // Chọn địa chỉ từ gợi ý - FIXED VERSION
+  // Chọn địa chỉ từ gợi ý
   const selectAddress = (selectedAddress) => {
-    // Update restaurant data first
     setRestaurantData({
       ...restaurantData,
       address: {
@@ -364,28 +297,15 @@ const ManageRestaurant = () => {
         longitude: selectedAddress.lon,
       },
     });
-    
-    // Update address query WITHOUT triggering search
     setAddressQuery(selectedAddress.display_name);
-    
-    // Hide suggestions
     setShowSuggestions(false);
     setAddressSuggestions([]);
-    
-    // Calculate distance if user location is available
-    if (userLocation) {
-      calculateDistanceToRestaurant(userLocation.latitude, userLocation.longitude);
-    }
-    
     Toast.show({ type: "success", text1: "Thành công", text2: "Đã chọn địa chỉ!" });
   };
 
-  // Handle address input change - FIXED VERSION
+  // Handle address input change
   const handleAddressInputChange = (text) => {
     setAddressQuery(text);
-    
-    // Only trigger search if user is actively typing (length > 3)
-    // and don't trigger if text matches current restaurant address
     if (text.length >= 3 && text !== restaurantData.address.name) {
       searchAddress(text);
     } else {
@@ -581,12 +501,12 @@ const ManageRestaurant = () => {
         )}
       </View>
 
-      {/* Address Input and Search - FIXED VERSION */}
+      {/* Address Input and Search */}
       <View style={styles.addressContainer}>
         <TextInput
           label="Địa chỉ"
           value={addressQuery}
-          onChangeText={handleAddressInputChange} // Use new handler
+          onChangeText={handleAddressInputChange}
           style={[styles.input, { flex: 1 }]}
           placeholder="Nhập địa chỉ để tìm kiếm"
           right={searchLoading ? <TextInput.Icon icon={() => <ActivityIndicator size="small" />} /> : null}
@@ -637,34 +557,6 @@ const ManageRestaurant = () => {
         </Card>
       )}
 
-      {/* Distance Information */}
-      {distanceInfo && (
-        <Card style={styles.distanceCard}>
-          <Card.Content>
-            <Title style={styles.distanceTitle}>Thông tin khoảng cách</Title>
-            <Text style={styles.distanceText}>
-              📍 Khoảng cách: {distanceInfo.distance} km
-            </Text>
-            <Text style={styles.distanceText}>
-              ⏱️ Thời gian di chuyển: ~{distanceInfo.duration} phút
-            </Text>
-            <Text style={styles.distanceText}>
-              💰 Phí vận chuyển ước tính: {distanceInfo.shippingFee} VND
-            </Text>
-            {userLocation && restaurantData.address.latitude && (
-              <Button
-                mode="text"
-                onPress={() => calculateDistanceToRestaurant(userLocation.latitude, userLocation.longitude)}
-                style={{ marginTop: 10 }}
-                icon="refresh"
-              >
-                Tính lại khoảng cách
-              </Button>
-            )}
-          </Card.Content>
-        </Card>
-      )}
-
       {/* Bản đồ với WebView */}
       {restaurantData.address.name ? (
         <View style={styles.mapContainer}>
@@ -688,7 +580,6 @@ const ManageRestaurant = () => {
     </ScrollView>
   );
 };
-
 
 const styles = StyleSheet.create({
   title: {
@@ -723,7 +614,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    conservingRadius: 50,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
@@ -756,21 +647,6 @@ const styles = StyleSheet.create({
   locationButton: {
     flex: 1,
     marginHorizontal: 5,
-  },
-  distanceCard: {
-    margin: 15,
-    backgroundColor: "#f8f9fa",
-  },
-  distanceTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#2196F3",
-  },
-  distanceText: {
-    fontSize: 14,
-    marginVertical: 2,
-    color: "#424242",
   },
   suggestionsContainer: {
     margin: 15,

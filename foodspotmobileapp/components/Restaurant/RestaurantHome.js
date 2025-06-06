@@ -143,7 +143,7 @@ const RestaurantHome = () => {
             <Paragraph>Xem doanh thu tổng hợp.</Paragraph>
           </Card.Content>
         </Card>
-        <Card
+        {/* <Card
           style={styles.card}
           onPress={() => navigateToRevenueScreen("FoodRevenue", restaurant.id)}
         >
@@ -160,7 +160,7 @@ const RestaurantHome = () => {
             <Title>Thống kê doanh thu theo danh mục</Title>
             <Paragraph>Xem doanh thu theo từng danh mục.</Paragraph>
           </Card.Content>
-        </Card>
+        </Card> */}
       </View>
 
       <Button

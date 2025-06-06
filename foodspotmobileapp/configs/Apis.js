@@ -1,7 +1,9 @@
 import axios from "axios"
 import qs from "qs";
+import { API_URL } from '../config';
+import { NOTIFICATIONS } from '../configs/Apis';
 
-const BASE_URL = 'http://192.168.1.5:8000/';
+const BASE_URL = 'http://192.168.1.113:8000/';
 
 export const endpoints = {
     //order
@@ -70,64 +72,69 @@ export const endpoints = {
     'reviews-restaurant-detail': (id) => `/restaurant-review/${id}/`,
     'reviews-food-detail': (id) => `/foods-review/${id}/`,
 
-    // Revenue Statistics
-  "food-revenue": (restaurantId) => `/restaurant/${restaurantId}/food-revenue/`,
-  "category-revenue": (restaurantId) => `/restaurant/${restaurantId}/category-revenue/`,
-  "combined-revenue": (restaurantId) => `/restaurant/${restaurantId}/revenue-statistics/`,
+      // Revenue Statistics
+    "food-revenue": (restaurantId) => `/restaurant/${restaurantId}/food-revenue/`,
+    "category-revenue": (restaurantId) => `/restaurant/${restaurantId}/category-revenue/`,
+    "combined-revenue": (restaurantId) => `/restaurant/${restaurantId}/revenue-statistics/`,
 
-    
+
+    // Notifications
+    'notifications': '/notifications/',
+    'mark-as-read': (id) => `/notifications/${id}/mark_read/`,
+    'mark-all-as-read': '/notifications/mark_all_read/',
+    'unread-count': '/notifications/unread_count/'
 }
 
   
-export const getFoodRevenue = async (restaurantId, period, token) => {
-  const authApi = authApis(token);
-  try {
-    const response = await authApi.get(endpoints['food-revenue'](restaurantId), {
-      params: { period },
-      paramsSerializer: (params) => qs.stringify(params, { encode: false }),
-    });
-    // Kiểm tra dữ liệu trả về
-    if (!response.data?.data?.summary) {
-      throw new Error('Dữ liệu doanh thu không đầy đủ!');
-    }
-    return {
-      data: response.data.data, // Trả về object bên trong trường `data`
-      status: response.status,
-    };
-  } catch (error) {
-    const errorMessage =
-      error.response?.status === 401
-        ? 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!'
-        : error.response?.status === 403
-        ? 'Bạn không có quyền truy cập dữ liệu này!'
-        : error.message || 'Không thể tải dữ liệu doanh thu món ăn!';
-    console.error('Lỗi khi lấy dữ liệu doanh thu món ăn:', errorMessage);
-    throw new Error(errorMessage);
-  }
-};
+// export const getFoodRevenue = async (restaurantId, period, token) => {
+//   const authApi = authApis(token);
+//   try {
+//     const response = await authApi.get(endpoints['food-revenue'](restaurantId), {
+//       params: { period },
+//       paramsSerializer: (params) => qs.stringify(params, { encode: false }),
+//     });
+//     // Kiểm tra dữ liệu trả về
+//     if (!response.data?.data?.summary) {
+//       throw new Error('Dữ liệu doanh thu không đầy đủ!');
+//     }
+//     return {
+//       data: response.data.data, // Trả về object bên trong trường `data`
+//       status: response.status,
+//     };
+//   } catch (error) {
+//     const errorMessage =
+//       error.response?.status === 401
+//         ? 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!'
+//         : error.response?.status === 403
+//         ? 'Bạn không có quyền truy cập dữ liệu này!'
+//         : error.message || 'Không thể tải dữ liệu doanh thu món ăn!';
+//     console.error('Lỗi khi lấy dữ liệu doanh thu món ăn:', errorMessage);
+//     throw new Error(errorMessage);
+//   }
+// };
 
-export const getCategoryRevenue = async (restaurantId, period, token) => {
-  const authApi = authApis(token);
-  try {
-    const response = await authApi.get(endpoints['category-revenue'](restaurantId), {
-      params: { period },
-      paramsSerializer: (params) => qs.stringify(params, { encode: false }),
-    });
-    return {
-      data: response.data,
-      status: response.status,
-    };
-  } catch (error) {
-    const errorMessage =
-      error.response?.status === 401
-        ? 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!'
-        : error.response?.status === 403
-        ? 'Bạn không có quyền truy cập dữ liệu này!'
-        : error.message || 'Không thể tải dữ liệu doanh thu danh mục!';
-    console.error('Lỗi khi lấy dữ liệu doanh thu danh mục:', errorMessage);
-    throw new Error(errorMessage);
-  }
-};
+// export const getCategoryRevenue = async (restaurantId, period, token) => {
+//   const authApi = authApis(token);
+//   try {
+//     const response = await authApi.get(endpoints['category-revenue'](restaurantId), {
+//       params: { period },
+//       paramsSerializer: (params) => qs.stringify(params, { encode: false }),
+//     });
+//     return {
+//       data: response.data,
+//       status: response.status,
+//     };
+//   } catch (error) {
+//     const errorMessage =
+//       error.response?.status === 401
+//         ? 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!'
+//         : error.response?.status === 403
+//         ? 'Bạn không có quyền truy cập dữ liệu này!'
+//         : error.message || 'Không thể tải dữ liệu doanh thu danh mục!';
+//     console.error('Lỗi khi lấy dữ liệu doanh thu danh mục:', errorMessage);
+//     throw new Error(errorMessage);
+//   }
+// };
 
 export const getCombinedRevenue = async (restaurantId, period, token) => {
   const authApi = authApis(token);
@@ -228,3 +235,4 @@ const api = axios.create({
   };
   
   export default api;
+
