@@ -98,6 +98,27 @@ const searchAddressMultiple = async (query) => {
   }
 };
 
+const calculateDistance = async (userLat, userLng, restaurantLat, restaurantLng) => {
+  try {
+    const res = await axios.get(
+      `https://router.project-osrm.org/route/v1/driving/${restaurantLng},${restaurantLat};${userLng},${userLat}?overview=false`
+    );
+    if (res.data.code === "Ok") {
+      const route = res.data.routes[0];
+      return {
+        distance: route.distance,
+        duration: route.duration
+      };
+    } else {
+      console.warn("Không thể tính khoảng cách");
+      return null;
+    }
+  } catch (err) {
+    console.error("Lỗi khi tính khoảng cách:", err);
+    return null;
+  }
+};
+
 const ManageRestaurant = () => {
   const [restaurantData, setRestaurantData] = useState({
     name: "",
@@ -106,6 +127,7 @@ const ManageRestaurant = () => {
     address: { name: "", latitude: null, longitude: null },
     avatar: null,
   });
+  const [originalAvatarUrl, setOriginalAvatarUrl] = useState(null); // Thêm trạng thái để lưu URL ảnh ban đầu
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -113,6 +135,7 @@ const ManageRestaurant = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [distanceInfo, setDistanceInfo] = useState(null);
   
   const navigation = useNavigation();
   const route = useRoute();
@@ -142,11 +165,48 @@ const ManageRestaurant = () => {
       const location = await Location.getCurrentPositionAsync({});
       setUserLocation(location.coords);
       
+      if (restaurantData.address.latitude && restaurantData.address.longitude) {
+        calculateDistanceToRestaurant(location.coords.latitude, location.coords.longitude);
+      }
+      
       Toast.show({ type: "success", text1: "Thành công", text2: "Đã lấy vị trí hiện tại!" });
     } catch (ex) {
       Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể lấy vị trí hiện tại!" });
     } finally {
       setLocationLoading(false);
+    }
+  };
+
+  // Tính khoảng cách
+  const calculateDistanceToRestaurant = async (userLat, userLng) => {
+    if (!restaurantData.address.latitude || !restaurantData.address.longitude) {
+      Toast.show({ type: "error", text1: "Lỗi", text2: "Chưa có tọa độ nhà hàng!" });
+      return;
+    }
+
+    try {
+      const result = await calculateDistance(
+        userLat, 
+        userLng, 
+        restaurantData.address.latitude, 
+        restaurantData.address.longitude
+      );
+      
+      if (result) {
+        setDistanceInfo({
+          distance: (result.distance / 1000).toFixed(2),
+          duration: Math.ceil(result.duration / 60),
+          shippingFee: restaurantData.shipping_fee_per_km ? 
+            (result.distance / 1000 * parseFloat(restaurantData.shipping_fee_per_km)).toFixed(0) : 0
+        });
+        Toast.show({ 
+          type: "success", 
+          text1: "Thành công", 
+          text2: `Khoảng cách: ${(result.distance / 1000).toFixed(2)} km` 
+        });
+      }
+    } catch (ex) {
+      Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể tính khoảng cách!" });
     }
   };
 
@@ -224,7 +284,12 @@ const ManageRestaurant = () => {
 
       const authApi = authApis(token);
       const response = await authApi.get(endpoints["restaurant-details"](restaurantId));
-      setRestaurantData(response.data);
+      setRestaurantData({
+        ...response.data,
+        avatar: null, // Đảm bảo avatar ban đầu là null để không ghi đè ảnh mới
+      });
+      setOriginalAvatarUrl(response.data.avatar); // Lưu URL ảnh ban đầu
+      console.log("URL ảnh avatar từ server:", response.data.avatar);
       setAddressQuery(response.data.address.name || "");
     } catch (ex) {
       let errorMessage = ex.response?.data?.error || ex.message || "Không thể tải thông tin nhà hàng!";
@@ -248,6 +313,12 @@ const ManageRestaurant = () => {
   // Cập nhật giá trị trường
   const handleInputChange = (field, value) => {
     setRestaurantData({ ...restaurantData, [field]: value });
+    if (field === "shipping_fee_per_km" && distanceInfo) {
+      setDistanceInfo({
+        ...distanceInfo,
+        shippingFee: value ? (distanceInfo.distance * parseFloat(value)).toFixed(0) : 0
+      });
+    }
   };
 
   // Tìm kiếm địa chỉ với debounce
@@ -297,15 +368,22 @@ const ManageRestaurant = () => {
         longitude: selectedAddress.lon,
       },
     });
+    
     setAddressQuery(selectedAddress.display_name);
     setShowSuggestions(false);
     setAddressSuggestions([]);
+    
+    if (userLocation) {
+      calculateDistanceToRestaurant(userLocation.latitude, userLocation.longitude);
+    }
+    
     Toast.show({ type: "success", text1: "Thành công", text2: "Đã chọn địa chỉ!" });
   };
 
   // Handle address input change
   const handleAddressInputChange = (text) => {
     setAddressQuery(text);
+    
     if (text.length >= 3 && text !== restaurantData.address.name) {
       searchAddress(text);
     } else {
@@ -419,7 +497,7 @@ const ManageRestaurant = () => {
           style="border:0; width:100%; height:100%;"
           src="https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
             restaurantData.address.name || "Ho Chi Minh City, Vietnam"
-          )}¢er=${restaurantData.address.latitude || 10.7769},${
+          )}&center=${restaurantData.address.latitude || 10.7769},${
             restaurantData.address.longitude || 106.7009
           }&zoom=15"
           allowfullscreen>
@@ -445,13 +523,17 @@ const ManageRestaurant = () => {
         <Title style={styles.subtitle}>Ảnh đại diện</Title>
         {restaurantData.avatar?.uri ? (
           <Image source={{ uri: restaurantData.avatar.uri }} style={styles.avatar} />
+        ) : originalAvatarUrl ? (
+          <Image source={{ uri: originalAvatarUrl }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text>Chưa có ảnh</Text>
           </View>
         )}
         <TouchableOpacity style={MyStyles.margin} onPress={pickImage} disabled={loading}>
-          <Text style={{ color: loading ? "#888" : "blue" }}>Chọn ảnh</Text>
+          <Text style={{ color: loading ? "#888" : "blue" }}>
+            {restaurantData.avatar ? "Thay đổi ảnh" : "Chọn ảnh"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -557,6 +639,34 @@ const ManageRestaurant = () => {
         </Card>
       )}
 
+      {/* Distance Information */}
+      {distanceInfo && (
+        <Card style={styles.distanceCard}>
+          <Card.Content>
+            <Title style={styles.distanceTitle}>Thông tin khoảng cách</Title>
+            <Text style={styles.distanceText}>
+              📍 Khoảng cách: {distanceInfo.distance} km
+            </Text>
+            <Text style={styles.distanceText}>
+              ⏱️ Thời gian di chuyển: ~{distanceInfo.duration} phút
+            </Text>
+            <Text style={styles.distanceText}>
+              💰 Phí vận chuyển ước tính: {distanceInfo.shippingFee} VND
+            </Text>
+            {userLocation && restaurantData.address.latitude && (
+              <Button
+                mode="text"
+                onPress={() => calculateDistanceToRestaurant(userLocation.latitude, userLocation.longitude)}
+                style={{ marginTop: 10 }}
+                icon="refresh"
+              >
+                Tính lại khoảng cách
+              </Button>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
       {/* Bản đồ với WebView */}
       {restaurantData.address.name ? (
         <View style={styles.mapContainer}>
@@ -614,7 +724,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: 100,
     height: 100,
-    conservingRadius: 50,
+    borderRadius: 50,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
@@ -647,6 +757,21 @@ const styles = StyleSheet.create({
   locationButton: {
     flex: 1,
     marginHorizontal: 5,
+  },
+  distanceCard: {
+    margin: 15,
+    backgroundColor: "#f8f9fa",
+  },
+  distanceTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#2196F3",
+  },
+  distanceText: {
+    fontSize: 14,
+    marginVertical: 2,
+    color: "#424242",
   },
   suggestionsContainer: {
     margin: 15,

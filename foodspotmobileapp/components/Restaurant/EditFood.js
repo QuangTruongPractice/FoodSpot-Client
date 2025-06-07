@@ -255,7 +255,7 @@ const EditFood = ({ navigation, route }) => {
                 : 'image/jpeg'
             });
         }
-
+        console.log("----------------------------------------------------------", foodData.image);
         console.log("🔍 Sending PATCH request with FormData");
 
         // Gửi yêu cầu cập nhật món ăn

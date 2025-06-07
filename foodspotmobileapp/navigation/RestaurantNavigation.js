@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import RestaurantHome from "../components/restaurant/RestaurantHome";
+import RestaurantHome from '../components/restaurant/RestaurantHome'
 import AddFood from "../components/restaurant/AddFood";
 import EditFood from "../components/restaurant/EditFood";
 import DeleteFood from "../components/restaurant/DeleteFood";

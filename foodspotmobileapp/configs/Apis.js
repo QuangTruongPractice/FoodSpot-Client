@@ -1,7 +1,7 @@
 import axios from "axios"
 import qs from "qs";
 
-const BASE_URL = 'http://192.168.1.113:8000/';
+const BASE_URL = 'http://192.168.1.4:8000/';
 
 export const endpoints = {
     //order

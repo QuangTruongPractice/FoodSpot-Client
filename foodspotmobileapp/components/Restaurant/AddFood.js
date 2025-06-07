@@ -29,7 +29,6 @@ const AddFood = ({ navigation, route }) => {
     image: null
   });
   
-  // State cho nhiều giá
   const [prices, setPrices] = useState([
     { time_serve: "NOON", price: "", id: Date.now() }
   ]);
@@ -39,10 +38,10 @@ const AddFood = ({ navigation, route }) => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const timeServeOptions = [
-    { key: "MORNING", label: "Sáng" },
-    { key: "NOON", label: "Trưa" },
-    { key: "EVENING", label: "Chiều" },
-    { key: "NIGHT", label: "Tối" },
+    { key: "MORNING", label: "🌅 Sáng" },
+    { key: "NOON", label: "☀️ Trưa" },
+    { key: "EVENING", label: "🌆 Chiều" },
+    { key: "NIGHT", label: "🌙 Tối" },
   ];
 
   useEffect(() => {
@@ -65,7 +64,6 @@ const AddFood = ({ navigation, route }) => {
     fetchCategories();
   }, []);
 
-  // Hàm chọn ảnh từ thư viện
   const picker = async () => {
     let { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -79,14 +77,14 @@ const AddFood = ({ navigation, route }) => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaType: "photo",
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8
     });
 
     if (!result.canceled) {
-      updateField("image", result.assets[0]);
+      setFoodData({ ...foodData, image: result.assets[0] });
       Toast.show({
         type: "success",
         text1: "Thành công",
@@ -99,7 +97,6 @@ const AddFood = ({ navigation, route }) => {
     setFoodData({ ...foodData, [field]: value });
   };
 
-  // Cập nhật giá theo thời gian phục vụ
   const updatePrice = (id, field, value) => {
     if (field === "price") {
       const numericValue = value.replace(/[^0-9]/g, '');
@@ -113,7 +110,6 @@ const AddFood = ({ navigation, route }) => {
     }
   };
 
-  // Thêm khung giá mới
   const addPriceSlot = () => {
     const newPrice = {
       time_serve: "NOON",
@@ -123,7 +119,6 @@ const AddFood = ({ navigation, route }) => {
     setPrices([...prices, newPrice]);
   };
 
-  // Xóa khung giá
   const removePriceSlot = (id) => {
     if (prices.length === 1) {
       Alert.alert("Thông báo", "Phải có ít nhất một mức giá!");
@@ -132,7 +127,6 @@ const AddFood = ({ navigation, route }) => {
     setPrices(prices.filter(price => price.id !== id));
   };
 
-  // Kiểm tra xem thời gian phục vụ đã được chọn chưa
   const isTimeServeUsed = (timeServe, currentId) => {
     return prices.some(price => price.time_serve === timeServe && price.id !== currentId);
   };
@@ -149,25 +143,17 @@ const AddFood = ({ navigation, route }) => {
   };
 
   const validatePrices = () => {
-    // Kiểm tra tất cả các giá đã được nhập
     for (let price of prices) {
       if (!price.price || parseInt(price.price) <= 0) {
         return false;
       }
     }
-
-    // Kiểm tra không có thời gian phục vụ trùng lặp
     const timeServes = prices.map(p => p.time_serve);
     const uniqueTimeServes = [...new Set(timeServes)];
-    if (timeServes.length !== uniqueTimeServes.length) {
-      return false;
-    }
-
-    return true;
+    return timeServes.length === uniqueTimeServes.length;
   };
 
   const handleAddFood = async () => {
-    // Validation
     if (!foodData.name) {
       Alert.alert("Lỗi", "Vui lòng điền tên món ăn!");
       return;
@@ -185,7 +171,6 @@ const AddFood = ({ navigation, route }) => {
     try {
       const token = await AsyncStorage.getItem("access_token");
       
-      // Bước 1: Tạo món ăn mới với FormData để gửi kèm ảnh
       let form = new FormData();
       form.append("name", foodData.name);
       form.append("description", foodData.description || "");
@@ -193,42 +178,31 @@ const AddFood = ({ navigation, route }) => {
       form.append("restaurant", parseInt(restaurantId));
       form.append("is_available", foodData.is_available);
 
-      // Thêm ảnh nếu có
       if (foodData.image) {
         form.append("image", {
           uri: foodData.image.uri,
-          name: foodData.image.fileName,
+          name: foodData.image.fileName || `food_image_${Date.now()}.jpg`,
           type: foodData.image.type && foodData.image.type.startsWith('image/')
-          ? foodData.image.type
-          : 'image/jpeg'
+            ? foodData.image.type
+            : 'image/jpeg'
         });
       }
-
-      console.log("Creating food with FormData");
-
-      // Tạo món ăn mới với ảnh
+      console.log("-----------------------------------------",foodData.image)
       const createFoodResponse = await authApis(token).post(
         endpoints["foods"],
         form,
         {
-          headers: { 
-            "Content-Type": "multipart/form-data" 
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
 
       const newFoodId = createFoodResponse.data.id;
-      console.log("Created food with ID:", newFoodId);
 
-      // Bước 2: Thêm tất cả các giá cho món ăn vừa tạo
       const pricePromises = prices.map(priceItem => {
         const pricePayload = {
           time_serve: priceItem.time_serve,
           price: parseInt(priceItem.price),
         };
-
-        console.log("Adding price with payload:", pricePayload);
-
         return authApis(token).post(
           endpoints["food-add-price"](newFoodId),
           pricePayload,
@@ -238,7 +212,6 @@ const AddFood = ({ navigation, route }) => {
         );
       });
 
-      // Chờ tất cả các request thêm giá hoàn thành
       await Promise.all(pricePromises);
 
       Toast.show({
@@ -353,112 +326,129 @@ const AddFood = ({ navigation, route }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Thêm Món Ăn Mới</Text>
-      
-      <Text style={styles.label}>Tên món ăn *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Nhập tên món ăn"
-        value={foodData.name}
-        onChangeText={(text) => updateField("name", text)}
-        editable={!loading}
-      />
-      
-      <Text style={styles.label}>Mô tả</Text>
-      <TextInput
-        style={[styles.input, styles.descriptionInput]}
-        placeholder="Nhập mô tả món ăn"
-        value={foodData.description}
-        onChangeText={(text) => updateField("description", text)}
-        multiline
-        editable={!loading}
-      />
-      
-      <Text style={styles.label}>Danh mục món ăn *</Text>
-      <TouchableOpacity 
-        style={styles.categorySelector}
-        onPress={() => setShowCategoryModal(true)}
-        disabled={loading}
-      >
-        <Text style={[
-          styles.categorySelectorText, 
-          !foodData.food_category && styles.placeholderText
-        ]}>
-          {getSelectedCategoryName()}
-        </Text>
-        <Text style={styles.dropdownArrow}>▼</Text>
-      </TouchableOpacity>
-
-      {/* Phần chọn ảnh món ăn */}
-      <Text style={styles.label}>Ảnh món ăn</Text>
-      <TouchableOpacity 
-        style={styles.imagePickerButton} 
-        onPress={picker} 
-        disabled={loading}
-      >
-        <Text style={[styles.imagePickerText, loading && styles.disabledText]}>
-          {foodData.image ? "Thay đổi ảnh món ăn..." : "Chọn ảnh món ăn..."}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Hiển thị ảnh đã chọn */}
-      {foodData.image && (
-        <View style={styles.imagePreviewContainer}>
-          <Image
-            style={styles.imagePreview}
-            source={{ uri: foodData.image.uri }}
-          />
-          <TouchableOpacity 
-            style={styles.removeImageButton}
-            onPress={() => updateField("image", null)}
-            disabled={loading}
-          >
-            <Text style={styles.removeImageText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.availabilityContainer}>
-        <Text style={styles.label}>Trạng thái món ăn</Text>
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>
-            {foodData.is_available ? "Có sẵn" : "Hết hàng"}
-          </Text>
-          <Switch
-            value={foodData.is_available}
-            onValueChange={(value) => updateField("is_available", value)}
-            trackColor={{ false: "#ccc", true: "#6200ee" }}
-            thumbColor={foodData.is_available ? "#fff" : "#f4f3f4"}
-            disabled={loading}
-          />
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Thêm Món Ăn Mới</Text>
+        <Text style={styles.subtitle}>Thêm món ăn mới cho nhà hàng của bạn</Text>
       </View>
 
-      {/* Phần giá - cho phép nhiều giá */}
-      <View style={styles.pricesSection}>
-        <View style={styles.pricesSectionHeader}>
-          <Text style={styles.pricesSectionTitle}>Giá món ăn *</Text>
-          <TouchableOpacity 
-            style={styles.addPriceButton}
-            onPress={addPriceSlot}
-            disabled={loading || prices.length >= 4}
-          >
-            <Text style={styles.addPriceButtonText}>+ Thêm giá</Text>
-          </TouchableOpacity>
+      <View style={styles.formContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Tên món ăn *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập tên món ăn"
+            placeholderTextColor="#999"
+            value={foodData.name}
+            onChangeText={(text) => updateField("name", text)}
+            editable={!loading}
+          />
         </View>
         
-        {prices.map((priceItem, index) => renderPriceSlot(priceItem, index))}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Mô tả</Text>
+          <TextInput
+            style={[styles.input, styles.descriptionInput]}
+            placeholder="Nhập mô tả món ăn"
+            placeholderTextColor="#999"
+            value={foodData.description}
+            onChangeText={(text) => updateField("description", text)}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            editable={!loading}
+          />
+        </View>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Danh mục món ăn *</Text>
+          <TouchableOpacity 
+            style={styles.categorySelector}
+            onPress={() => setShowCategoryModal(true)}
+            disabled={loading}
+          >
+            <Text style={[
+              styles.categorySelectorText, 
+              !foodData.food_category && styles.placeholderText
+            ]}>
+              {getSelectedCategoryName()}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Ảnh món ăn</Text>
+          <TouchableOpacity 
+            style={[styles.imagePickerButton, loading && styles.disabledButton]}
+            onPress={picker} 
+            disabled={loading}
+          >
+            <Text style={[styles.imagePickerText, loading && styles.disabledText]}>
+              {foodData.image ? "Thay đổi ảnh món ăn..." : "Chọn ảnh món ăn..."}
+            </Text>
+          </TouchableOpacity>
+
+          {foodData.image && (
+            <View style={styles.imagePreviewContainer}>
+              <Image
+                style={styles.imagePreview}
+                source={{ uri: foodData.image.uri }}
+              />
+              <TouchableOpacity 
+                style={styles.removeImageButton}
+                onPress={() => updateField("image", null)}
+                disabled={loading}
+              >
+                <Text style={styles.removeImageText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.switchContainer}>
+            <View style={styles.switchInfo}>
+              <Text style={styles.label}>Trạng thái món ăn</Text>
+              <Text style={styles.switchDescription}>
+                {foodData.is_available ? "Có sẵn" : "Hết hàng"}
+              </Text>
+            </View>
+            <Switch
+              value={foodData.is_available}
+              onValueChange={(value) => updateField("is_available", value)}
+              trackColor={{ false: "#D1D5DB", true: "#34D399" }}
+              thumbColor={foodData.is_available ? "#10B981" : "#9CA3AF"}
+              ios_backgroundColor="#D1D5DB"
+              disabled={loading}
+            />
+          </View>
+        </View>
+
+        <View style={styles.pricesSection}>
+          <View style={styles.pricesSectionHeader}>
+            <Text style={styles.pricesSectionTitle}>Giá món ăn *</Text>
+            <TouchableOpacity 
+              style={[styles.addPriceButton, (loading || prices.length >= 4) && styles.disabledButton]}
+              onPress={addPriceSlot}
+              disabled={loading || prices.length >= 4}
+            >
+              <Text style={styles.addPriceButtonText}>+ Thêm giá</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {prices.map((priceItem, index) => renderPriceSlot(priceItem, index))}
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.submitButton, loading && styles.disabledButton]} 
+          onPress={handleAddFood}
+          disabled={loading}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? "Đang thêm..." : "Thêm món ăn"}
+          </Text>
+        </TouchableOpacity>
       </View>
-      
-      <TouchableOpacity 
-        style={[styles.submitButton, loading && styles.disabledButton]} 
-        onPress={handleAddFood}
-        disabled={loading}
-      >
-        <Text style={styles.submitButtonText}>
-          {loading ? "Đang thêm..." : "Thêm món ăn"}
-        </Text>
-      </TouchableOpacity>
 
       <Modal
         visible={showCategoryModal}
@@ -512,91 +502,128 @@ const AddFood = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    padding: 16,
+    backgroundColor: "#F8FAFC",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
-    textAlign: "center",
+    color: "#1F2937",
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+  },
+  formContainer: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 25,
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#374151",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
+    color: "#1F2937",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   descriptionInput: {
     height: 100,
-    textAlignVertical: "top",
+    paddingTop: 14,
   },
   categorySelector: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    marginBottom: 12,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   categorySelectorText: {
     fontSize: 16,
-    color: "#333",
+    color: "#1F2937",
     flex: 1,
   },
   placeholderText: {
-    color: "#999",
+    color: "#9CA3AF",
   },
   dropdownArrow: {
     fontSize: 12,
-    color: "#666",
+    color: "#6B7280",
   },
-  // Styles cho phần chọn ảnh
   imagePickerButton: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    marginBottom: 12,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   imagePickerText: {
     fontSize: 16,
-    color: "#6200ee",
+    color: "#007AFF",
+    fontWeight: "500",
   },
   disabledText: {
-    color: "#999",
+    color: "#9CA3AF",
   },
   imagePreviewContainer: {
-    position: "relative",
-    marginBottom: 12,
+    marginTop: 10,
     alignItems: "center",
+    position: "relative",
   },
   imagePreview: {
     width: 200,
     height: 150,
-    borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   removeImageButton: {
     position: "absolute",
     top: 5,
     right: 5,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "#F3F4F6",
     borderRadius: 15,
     width: 30,
     height: 30,
@@ -604,29 +631,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   removeImageText: {
-    color: "#fff",
     fontSize: 16,
+    color: "#6B7280",
     fontWeight: "bold",
-  },
-  availabilityContainer: {
-    marginBottom: 12,
   },
   switchContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#FFF",
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D1D5DB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  switchLabel: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
+  switchInfo: {
+    flex: 1,
   },
-  // Styles cho phần giá
+  switchDescription: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 2,
+  },
   pricesSection: {
     marginBottom: 20,
   },
@@ -639,26 +670,31 @@ const styles = StyleSheet.create({
   pricesSectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: "#374151",
   },
   addPriceButton: {
-    backgroundColor: "#6200ee",
+    backgroundColor: "#007AFF",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   addPriceButtonText: {
-    color: "#fff",
+    color: "#FFF",
     fontSize: 14,
     fontWeight: "500",
   },
   priceSlotContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D1D5DB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   priceSlotHeader: {
     flexDirection: "row",
@@ -669,10 +705,10 @@ const styles = StyleSheet.create({
   priceSlotTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#6200ee",
+    color: "#007AFF",
   },
   removePriceButton: {
-    backgroundColor: "#ff4444",
+    backgroundColor: "#FF4444",
     borderRadius: 12,
     width: 24,
     height: 24,
@@ -680,7 +716,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   removePriceButtonText: {
-    color: "#fff",
+    color: "#FFF",
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -695,51 +731,57 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#f9f9f9",
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9F9F9",
   },
   selectedTimeServe: {
-    backgroundColor: "#6200ee",
-    borderColor: "#6200ee",
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   disabledTimeServe: {
-    backgroundColor: "#f0f0f0",
-    borderColor: "#ccc",
+    backgroundColor: "#F0F0F0",
+    borderColor: "#CCC",
   },
   timeServeButtonText: {
     fontSize: 14,
-    color: "#333",
+    color: "#1F2937",
   },
   selectedTimeServeText: {
-    color: "#fff",
+    color: "#FFF",
     fontWeight: "600",
   },
   disabledTimeServeText: {
-    color: "#999",
+    color: "#9CA3AF",
   },
   priceInput: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#F9F9F9",
     borderRadius: 6,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D1D5DB",
     fontSize: 16,
     marginBottom: 8,
   },
   submitButton: {
-    backgroundColor: "#6200ee",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
     marginBottom: 20,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitButtonText: {
-    color: "#fff",
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   disabledButton: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#9CA3AF",
+    shadowOpacity: 0.1,
   },
   modalOverlay: {
     flex: 1,
@@ -748,57 +790,70 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    width: "90%",
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    margin: 20,
     maxHeight: "70%",
+    width: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#E5E7EB",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: "#1F2937",
   },
   closeButton: {
-    padding: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
-    fontSize: 18,
-    color: "#666",
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "bold",
   },
   categoryList: {
     maxHeight: 300,
   },
   categoryItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
   selectedCategoryItem: {
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#EBF8FF",
   },
   categoryItemText: {
     fontSize: 16,
-    color: "#333",
+    color: "#1F2937",
     flex: 1,
   },
   selectedCategoryItemText: {
-    color: "#6200ee",
+    color: "#007AFF",
     fontWeight: "600",
   },
   checkMark: {
     fontSize: 16,
-    color: "#6200ee",
+    color: "#007AFF",
     fontWeight: "bold",
   },
 });
