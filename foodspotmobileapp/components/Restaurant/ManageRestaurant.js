@@ -126,7 +126,7 @@ const ManageRestaurant = () => {
     phone_number: "",
     shipping_fee_per_km: "",
     address: { name: "", latitude: null, longitude: null },
-    avatar: null,
+    image: null,
   });
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -410,7 +410,7 @@ const ManageRestaurant = () => {
     });
 
     if (!result.canceled) {
-      setRestaurantData({ ...restaurantData, avatar: result.assets[0] });
+      setRestaurantData({ ...restaurantData, image: result.assets[0] });
       Toast.show({ type: "success", text1: "Thành công", text2: "Đã chọn ảnh đại diện!" });
     }
   };
@@ -450,10 +450,10 @@ const ManageRestaurant = () => {
                 formData.append("address.longitude", restaurantData.address.longitude.toString());
               }
 
-              if (restaurantData.avatar && restaurantData.avatar.uri) {
-                formData.append("avatar", {
-                  uri: restaurantData.avatar.uri,
-                  name: restaurantData.avatar.fileName || "avatar.png",
+              if (restaurantData.image && restaurantData.image.uri) {
+                formData.append("image", {
+                  uri: restaurantData.image.uri,
+                  name: restaurantData.image.fileName || "image.png",
                   type: "image/png",
                 });
               }
@@ -523,8 +523,8 @@ const ManageRestaurant = () => {
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         <Title style={styles.subtitle}>Ảnh đại diện</Title>
-        {restaurantData.avatar ? (
-          <Image source={{ uri: restaurantData.avatar }} style={styles.avatar} />
+        {restaurantData.image ? (
+          <Image source={{ uri: restaurantData.image }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text>Chưa có ảnh</Text>

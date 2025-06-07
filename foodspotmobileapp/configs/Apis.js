@@ -79,7 +79,7 @@ export const endpoints = {
     // Notifications
     'notifications': '/notifications/',
     'mark-as-read': (id) => `/notifications/${id}/mark_read/`,
-    'mark-all-as-read': '/notifications/mark_all_read/',
+    'mark-all-as-read': '/notifications/mark-all-read/',
     'unread-count': '/notifications/unread_count/'
     
 }

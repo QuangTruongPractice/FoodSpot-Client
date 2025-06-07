@@ -243,7 +243,6 @@ const EditFood = ({ navigation, route }) => {
         form.append("restaurant", parseInt(restaurantId));
         form.append("is_available", foodData.is_available.toString());
 
-        // Chỉ thêm image vào FormData nếu có ảnh mới được chọn
         if (foodData.image === "") {
             form.append("image", "");
         } else if (foodData.image && foodData.image.uri) {
