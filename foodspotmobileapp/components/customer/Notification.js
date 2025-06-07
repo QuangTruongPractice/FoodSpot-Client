@@ -10,46 +10,42 @@ import {
 } from 'react-native';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
-import { endpoints } from '../../configs/Apis';
-import Apis, { authApis, endpoints } from './Apis';
+import Apis, { endpoints, authApis } from '../../configs/Apis';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
-
+// Notification Service
 export const notificationService = {
-    getNotifications: async () => {
+    getNotifications: async (token) => {
         try {
-            const response = await axios.get(endpoints['notifications']);
+            const response = await authApis(token).get(endpoints['notifications']);
             return Array.isArray(response.data) ? response.data : [];
         } catch (error) {
             console.error('Error fetching notifications:', error);
             return [];
         }
     },
-
-    markAsRead: async (notificationId) => {
+    markAsRead: async (notificationId, token) => {
         if (!notificationId) return null;
         try {
-            const response = await axios.post(endpoints['mark-as-read'](notificationId));
+            const response = await authApis(token).post(endpoints['mark-as-read'](notificationId));
             return response.data;
         } catch (error) {
             console.error('Error marking notification as read:', error);
             throw error;
         }
     },
-
-    markAllAsRead: async () => {
+    markAllAsRead: async (token) => {
         try {
-            const response = await axios.post(endpoints['mark-all-as-read']);
+            const response = await authApis(token).post(endpoints['mark-all-as-read']);
             return response.data;
         } catch (error) {
             console.error('Error marking all notifications as read:', error);
             throw error;
         }
     },
-
-    getUnreadCount: async () => {
+    getUnreadCount: async (token) => {
         try {
-            const response = await axios.get(endpoints['unread-count']);
+            const response = await authApis(token).get(endpoints['unread-count']);
             return response.data?.count || 0;
         } catch (error) {
             console.error('Error getting unread count:', error);
@@ -58,8 +54,7 @@ export const notificationService = {
     }
 };
 
-
-// Hàm retry request
+// Retry Request Utility
 const retryRequest = async (fn, retries = 3, delay = 1000) => {
     try {
         return await fn();
@@ -74,68 +69,42 @@ const Notification = ({ navigation }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [token, setToken] = useState(null);
+
+    // Load token on component mount
+    useEffect(() => {
+        const loadToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem("access_token");
+                setToken(storedToken);
+            } catch (error) {
+                console.error('Error loading token:', error);
+            }
+        };
+        loadToken();
+    }, []);
 
     const fetchNotifications = async () => {
+        if (!token) {
+            console.warn('No token available');
+            setLoading(false);
+            setRefreshing(false);
+            return;
+        }
         try {
-            const response = await notificationService.getNotifications();
-            
-            console.log('Response status:', response.status);
-            console.log('Response data:', JSON.stringify(response.data, null, 2));
-            
-            // Kiểm tra response và response.data
-            if (!response || !response.data) {
-                console.warn('Invalid response from API');
+            const response = await retryRequest(() => notificationService.getNotifications(token));
+            if (!response) {
+                console.warn('No response from API');
                 setNotifications([]);
                 return;
             }
-
-            // Đảm bảo response.data là một mảng
-            const data = Array.isArray(response.data) ? response.data : [];
-            console.log('Processed data:', JSON.stringify(data, null, 2));
-            
-            // Xử lý dữ liệu an toàn
-            const formattedData = data.reduce((acc, notification) => {
-                if (notification && typeof notification === 'object') {
-                    const formattedNotification = {
-                        id: notification.id || Math.random().toString(),
-                        title: notification.title || 'Thông báo',
-                        message: notification.message || '',
-                        created_at: notification.created_at || new Date().toISOString(),
-                        is_read: Boolean(notification.is_read)
-                    };
-                    console.log('Formatted notification:', JSON.stringify(formattedNotification, null, 2));
-                    acc.push(formattedNotification);
-                }
-                return acc;
-            }, []);
-
-            console.log('Final formatted data:', JSON.stringify(formattedData, null, 2));
-            setNotifications(formattedData);
+            setNotifications(Array.isArray(response) ? response : []);
         } catch (error) {
             console.error('Error fetching notifications:', error);
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-                headers: error.response?.headers
-            });
-            
-            let errorMessage = 'Không thể tải thông báo. Vui lòng thử lại!';
-            
-            if (error.response) {
-                // Lỗi từ server
-                errorMessage = error.response.data?.message || errorMessage;
-            } else if (error.request) {
-                // Lỗi mạng
-                errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra lại kết nối!';
-            } else if (error.code === 'ECONNABORTED') {
-                errorMessage = 'Kết nối quá thời gian. Vui lòng thử lại!';
-            }
-            
             Toast.show({
                 type: 'error',
-                text1: 'Lỗi',
-                text2: errorMessage
+                text1: 'Error',
+                text2: 'Failed to load notifications. Please try again!'
             });
             setNotifications([]);
         } finally {
@@ -144,9 +113,12 @@ const Notification = ({ navigation }) => {
         }
     };
 
+    // Fetch notifications when token is available
     useEffect(() => {
-        fetchNotifications();
-    }, []);
+        if (token) {
+            fetchNotifications();
+        }
+    }, [token]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -154,16 +126,13 @@ const Notification = ({ navigation }) => {
     };
 
     const handleMarkAsRead = async (notificationId) => {
-        if (!notificationId) {
-            console.warn('Invalid notification ID');
+        if (!notificationId || !token) {
+            console.warn('Invalid notification ID or no token');
             return;
         }
-        
         try {
-            const response = await notificationService.markAsRead(notificationId);
-            console.log('Mark as read response:', response.data);
-            
-            setNotifications(prevNotifications => 
+            await notificationService.markAsRead(notificationId, token);
+            setNotifications(prevNotifications =>
                 prevNotifications.map(notification =>
                     notification.id === notificationId
                         ? { ...notification, is_read: true }
@@ -172,45 +141,44 @@ const Notification = ({ navigation }) => {
             );
             Toast.show({
                 type: 'success',
-                text1: 'Thành công',
-                text2: 'Đã đánh dấu thông báo đã đọc'
+                text1: 'Success',
+                text2: 'Notification marked as read'
             });
         } catch (error) {
-            console.error('Error marking notification as read:', error);
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            
-            let errorMessage = 'Không thể đánh dấu thông báo đã đọc';
-            
-            if (error.response) {
-                errorMessage = error.response.data?.message || errorMessage;
-            } else if (error.request) {
-                errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra lại kết nối!';
-            } else if (error.code === 'ECONNABORTED') {
-                errorMessage = 'Kết nối quá thời gian. Vui lòng thử lại!';
-            }
-            
             Toast.show({
                 type: 'error',
-                text1: 'Lỗi',
-                text2: errorMessage
+                text1: 'Error',
+                text2: 'Failed to mark notification as read'
             });
         }
     };
 
     const handleMarkAllAsRead = async () => {
-        if (!notifications.length) {
+        if (!token) {
+            console.warn('No token available');
             return;
         }
-
+        if (!Array.isArray(notifications)) {
+            console.warn('Notifications is not an array');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Invalid notification data'
+            });
+            return;
+        }
+        const unreadNotifications = notifications.filter(n => !n.is_read);
+        if (unreadNotifications.length === 0) {
+            Toast.show({
+                type: 'info',
+                text1: 'Info',
+                text2: 'No unread notifications'
+            });
+            return;
+        }
         try {
-            const response = await notificationService.markAllAsRead();
-            console.log('Mark all as read response:', response.data);
-            
-            setNotifications(prevNotifications => 
+            await notificationService.markAllAsRead(token);
+            setNotifications(prevNotifications =>
                 prevNotifications.map(notification => ({
                     ...notification,
                     is_read: true
@@ -218,41 +186,23 @@ const Notification = ({ navigation }) => {
             );
             Toast.show({
                 type: 'success',
-                text1: 'Thành công',
-                text2: 'Đã đánh dấu tất cả thông báo đã đọc'
+                text1: 'Success',
+                text2: 'All notifications marked as read'
             });
         } catch (error) {
-            console.error('Error marking all notifications as read:', error);
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            
-            let errorMessage = 'Không thể đánh dấu tất cả thông báo đã đọc';
-            
-            if (error.response) {
-                errorMessage = error.response.data?.message || errorMessage;
-            } else if (error.request) {
-                errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra lại kết nối!';
-            } else if (error.code === 'ECONNABORTED') {
-                errorMessage = 'Kết nối quá thời gian. Vui lòng thử lại!';
-            }
-            
             Toast.show({
                 type: 'error',
-                text1: 'Lỗi',
-                text2: errorMessage
+                text1: 'Error',
+                text2: 'Failed to mark all notifications as read'
             });
         }
     };
 
     const renderNotificationItem = ({ item }) => {
-        if (!item || typeof item !== 'object') {
+        if (!item || !item.id) {
             console.warn('Invalid notification item:', item);
             return null;
         }
-
         return (
             <TouchableOpacity
                 style={[
@@ -263,7 +213,7 @@ const Notification = ({ navigation }) => {
             >
                 <View style={styles.notificationContent}>
                     <Text style={styles.notificationTitle}>{item.title}</Text>
-                    <Text style={styles.notificationMessage}>{item.message}</Text>
+                    <Text style={styles.notificationMessage}>{item.message || item.body}</Text>
                     <Text style={styles.notificationTime}>
                         {format(new Date(item.created_at), 'dd/MM/yyyy HH:mm')}
                     </Text>
@@ -280,20 +230,18 @@ const Notification = ({ navigation }) => {
         );
     }
 
-    const hasUnreadNotifications = notifications.some(notification => 
-        notification && typeof notification === 'object' && !notification.is_read
-    );
+    const hasUnreadNotifications = notifications.some(notification => !notification.is_read);
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Thông báo</Text>
+                <Text style={styles.headerTitle}>Notifications</Text>
                 {hasUnreadNotifications && (
                     <TouchableOpacity
                         style={styles.markAllButton}
                         onPress={handleMarkAllAsRead}
                     >
-                        <Text style={styles.markAllButtonText}>Đánh dấu đã đọc tất cả</Text>
+                        <Text style={styles.markAllButtonText}>Mark All as Read</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -311,7 +259,7 @@ const Notification = ({ navigation }) => {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Không có thông báo nào</Text>
+                        <Text style={styles.emptyText}>No notifications available</Text>
                     </View>
                 }
             />

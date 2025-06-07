@@ -1,7 +1,5 @@
 import axios from "axios"
 import qs from "qs";
-import { API_URL } from '../config';
-import { NOTIFICATIONS } from '../configs/Apis';
 
 const BASE_URL = 'http://192.168.1.113:8000/';
 

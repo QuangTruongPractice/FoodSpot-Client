@@ -115,11 +115,6 @@ const TabNavigator = ({ navigation }) => {
           {user.role === "RESTAURANT_USER" ? (
             <>
               <Tab.Screen
-                name="Notifications"
-                component={Notification}
-                options={{ tabBarIcon: () => <Icon size={30} source="bell" /> }}
-              />
-              <Tab.Screen
                 name="Profile"
                 component={Profile}
                 options={{ tabBarIcon: () => <Icon size={30} source="account" /> }}
@@ -131,11 +126,6 @@ const TabNavigator = ({ navigation }) => {
                 name="Cart"
                 component={CartStackNavigator}
                 options={{ tabBarIcon: () => <Icon size={30} source="cart" /> }}
-              />
-              <Tab.Screen
-                name="Notifications"
-                component={Notification}
-                options={{ tabBarIcon: () => <Icon size={30} source="bell" /> }}
               />
               <Tab.Screen
                 name="Profile"
