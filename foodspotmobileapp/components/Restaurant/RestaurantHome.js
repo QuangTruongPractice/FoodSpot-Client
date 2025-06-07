@@ -143,33 +143,8 @@ const RestaurantHome = () => {
             <Paragraph>Xem doanh thu tổng hợp.</Paragraph>
           </Card.Content>
         </Card>
-        {/* <Card
-          style={styles.card}
-          onPress={() => navigateToRevenueScreen("FoodRevenue", restaurant.id)}
-        >
-          <Card.Content>
-            <Title>Thống kê doanh thu theo món ăn</Title>
-            <Paragraph>Xem doanh thu theo từng món ăn.</Paragraph>
-          </Card.Content>
-        </Card>
-        <Card
-          style={styles.card}
-          onPress={() => navigateToRevenueScreen("CategoryRevenue", restaurant.id)}
-        >
-          <Card.Content>
-            <Title>Thống kê doanh thu theo danh mục</Title>
-            <Paragraph>Xem doanh thu theo từng danh mục.</Paragraph>
-          </Card.Content>
-        </Card> */}
       </View>
 
-      <Button
-        mode="contained"
-        style={[MyStyles.margin, styles.logoutButton]}
-        onPress={handleLogout}
-      >
-        Đăng xuất
-      </Button>
     </ScrollView>
   );
 };

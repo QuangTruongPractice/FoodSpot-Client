@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -19,7 +19,7 @@ import {
   Chip,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { endpoints, authApis } from "../../configs/Apis";
 import { MyUserContext } from "../../configs/MyContexts";
 import Toast from "react-native-toast-message";
@@ -81,7 +81,7 @@ const FoodManagement = () => {
       console.log("📥 Response status:", response.status);
       console.log("📦 Response data:", JSON.stringify(response.data, null, 2));
       
-      // SỬA CHÍNH TẠI ĐÂY - Xử lý response data đúng cách
+      // Xử lý response data đúng cách
       let data = [];
       if (Array.isArray(response.data)) {
         // Nếu response.data là array trực tiếp
@@ -128,6 +128,14 @@ const FoodManagement = () => {
       fetchFoods(`/restaurants/${restaurantId}/foods/`);
     }
   }, [restaurantId]);
+
+  // Thêm useFocusEffect để load lại dữ liệu khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log("🔄 Screen focused, fetching foods...");
+      fetchFoods(`/restaurants/${restaurantId}/foods/`);
+    }, [restaurantId])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
