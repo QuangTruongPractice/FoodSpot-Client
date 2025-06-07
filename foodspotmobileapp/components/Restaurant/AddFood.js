@@ -185,7 +185,6 @@ const AddFood = ({ navigation, route }) => {
     try {
       const token = await AsyncStorage.getItem("access_token");
       
-      // Bước 1: Tạo món ăn mới với FormData để gửi kèm ảnh
       let form = new FormData();
       form.append("name", foodData.name);
       form.append("description", foodData.description || "");
@@ -193,7 +192,6 @@ const AddFood = ({ navigation, route }) => {
       form.append("restaurant", parseInt(restaurantId));
       form.append("is_available", foodData.is_available);
 
-      // Thêm ảnh nếu có
       if (foodData.image) {
         form.append("image", {
           uri: foodData.image.uri,
@@ -202,6 +200,7 @@ const AddFood = ({ navigation, route }) => {
           ? foodData.image.type
           : 'image/jpeg'
         });
+        console.info(foodData.image.uri);
       }
 
       console.log("Creating food with FormData");

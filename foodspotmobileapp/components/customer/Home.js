@@ -24,6 +24,7 @@ const Home = () => {
   const nav = useNavigation();
   const [selectedRange, setSelectedRange] = useState(null);
   const [currentTimeServe, setCurrentTimeServe] = useState(getCurrentTimeServe());
+  const [refreshing, setRefreshing] = useState(false);
   const screenWidth = Dimensions.get('window').width;
   const numButtons = 4.5; // số lượng nút
   const buttonWidth = screenWidth / numButtons;
@@ -135,6 +136,21 @@ const Home = () => {
     setPage(1);
     setFoods([]);
     callback(value);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setPage(1);
+    try {
+      const res = await loadFood({ page: 1, q, cateId, priceMin, priceMax });
+      const availableFoods = res.results.filter(r => r.is_available === true);
+      setFoods(availableFoods);
+      if (res.next === null) setPage(0);
+    } catch (ex) {
+      console.error(ex);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const pickerSelectStyles = StyleSheet.create({
@@ -274,6 +290,8 @@ const Home = () => {
           onEndReached={() => {
             if (!loadingMore && page > 0) setPage(page + 1);
           }}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
     </SafeAreaView>

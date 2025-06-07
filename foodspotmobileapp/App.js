@@ -23,6 +23,8 @@ import OrderInfo from "./components/customer/OrderInfo";
 import OrderDetails from "./components/customer/OrderDetails";
 import Profile from "./components/User/Profile";
 import RestaurantNavigation from "./navigation/RestaurantNavigation";
+import ChatList from "./components/Chat/ChatList";
+import ChatRoom from "./components/Chat/ChatRoom";
 import { Icon } from "react-native-paper";
 import { PaperProvider } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
@@ -72,7 +74,17 @@ const CartStackNavigator = () => (
     <CartStack.Screen name="Cart" component={Cart} />
     <CartStack.Screen name="Checkout" component={Checkout} options={{ headerShown: true, headerBackTitleVisible: false }} />
     <CartStack.Screen name="Address" component={Address} options={{ headerShown: true, headerBackTitleVisible: false }} />
+    <CartStack.Screen name="AddAddress" component={AddAddress} options={{ headerShown: true, headerBackTitleVisible: false }} />
+    <CartStack.Screen name="UpdateAddress" component={UpdateAddress} options={{ headerShown: true, headerBackTitleVisible: false }} />
   </CartStack.Navigator>
+);
+
+const ChatStack = createNativeStackNavigator();
+const ChatStackNavigator = () => (
+  <ChatStack.Navigator screenOptions={{ headerShown: false }}>
+    <ChatStack.Screen name="ChatList" component={ChatList} />
+    <ChatStack.Screen name="ChatRoom" component={ChatRoom} options={{ headerShown: true, headerBackTitleVisible: false }} />
+  </ChatStack.Navigator>
 );
 
 const Tab = createBottomTabNavigator();
@@ -115,9 +127,9 @@ const TabNavigator = ({ navigation }) => {
           {user.role === "RESTAURANT_USER" ? (
             <>
               <Tab.Screen
-                name="Notifications"
-                component={Notification}
-                options={{ tabBarIcon: () => <Icon size={30} source="bell" /> }}
+                name="ChatList"
+                component={ChatStackNavigator}
+                options={{ tabBarIcon: () => <Icon size={30} source="message" /> }}
               />
               <Tab.Screen
                 name="Profile"
@@ -131,6 +143,11 @@ const TabNavigator = ({ navigation }) => {
                 name="Cart"
                 component={CartStackNavigator}
                 options={{ tabBarIcon: () => <Icon size={30} source="cart" /> }}
+              />
+              <Tab.Screen
+                name="ChatList"
+                component={ChatStackNavigator}
+                options={{ tabBarIcon: () => <Icon size={30} source="message" /> }}
               />
               <Tab.Screen
                 name="Notifications"

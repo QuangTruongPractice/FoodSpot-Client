@@ -36,6 +36,11 @@ export const loadUser = async (token) => {
   return user.data;
 }
 
+export const loadUserDetails = async (token, userId) => {
+  const user = await authApis(token).get(endpoints["users_read"](userId));
+  return user.data;
+}
+
 export const loadAddressList = async (token) => {
   const addRes = await authApis(token).get(endpoints["users-address_list"]);
   return addRes.data;

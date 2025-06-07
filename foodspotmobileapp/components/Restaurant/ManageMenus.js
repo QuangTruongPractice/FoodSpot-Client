@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -19,6 +19,7 @@ import { authApis, endpoints } from '../../configs/Apis';
 import { loadRestaurantMenu, checkToken } from '../../configs/Data';
 import MyStyles from '../../styles/MyStyles';
 import Toast from 'react-native-toast-message';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 const ManageMenus = ({ route, navigation }) => {
   const [user] = useContext(MyUserContext);
@@ -58,6 +59,13 @@ const ManageMenus = ({ route, navigation }) => {
   useEffect(() => {
     loadMenusData();
   }, [user, restaurantId, navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log("🔄 Screen focused, fetching menus...");
+      loadMenusData();
+    }, [user, restaurantId, navigation])
+  );
 
   const handleUpdateMenu = async (menuId, updatedMenu) => {
     try {
@@ -167,7 +175,7 @@ const ManageMenus = ({ route, navigation }) => {
       <Card.Actions style={styles.buttonContainer}>
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate('AddFoodInMenu', { menuId: item.id, restaurantId })}
+          onPress={() => navigation.navigate('AddMenuFood', { menuId: item.id, restaurantId })}
           style={styles.actionButton}
           labelStyle={styles.actionButtonLabel}
           compact

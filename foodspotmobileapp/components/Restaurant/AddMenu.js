@@ -1,5 +1,13 @@
 import React, { useState, useContext } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { 
+  View, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Text, 
+  Modal, 
+  FlatList,
+  Alert 
+} from 'react-native';
 import {
   Card,
   Title,
@@ -28,8 +36,26 @@ const AddMenu = () => {
     is_active: true,
   });
   const [loading, setLoading] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+
+  const timeServeOptions = [
+    { value: 'MORNING', label: '🌅 Buổi sáng' },
+    { value: 'NOON', label: '☀️ Buổi trưa' },
+    { value: 'EVENING', label: '🌆 Buổi tối' },
+    { value: 'NIGHT', label: '🌙 Buổi đêm' }
+  ];
 
   console.log('🔍 Restaurant ID:', restaurantId); // Debug restaurantId
+
+  const getSelectedTimeLabel = () => {
+    const selectedTime = timeServeOptions.find(option => option.value === menuForm.time_serve);
+    return selectedTime ? selectedTime.label : 'Chọn thời gian phục vụ';
+  };
+
+  const handleSelectTime = (timeValue) => {
+    setMenuForm({ ...menuForm, time_serve: timeValue });
+    setShowTimeModal(false);
+  };
 
   const handleAddMenu = async () => {
     if (!menuForm.name.trim()) {
@@ -85,7 +111,7 @@ const AddMenu = () => {
       const authApi = authApis(token);
       const menuPayload = {
         ...menuForm,
-        restaurant: parseInt(restaurantId, 10), // Sửa thành restaurant và đảm bảo là số nguyên
+        restaurant: parseInt(restaurantId, 10),
         foods: [],
       };
 
@@ -132,6 +158,7 @@ const AddMenu = () => {
         />
         <Title style={styles.title}>Thêm Menu Mới</Title>
       </View>
+      
       <Card style={styles.card}>
         <Card.Content>
           <TextInput
@@ -145,7 +172,8 @@ const AddMenu = () => {
             autoCapitalize="sentences"
             maxLength={255}
           />
-        <TextInput
+          
+          <TextInput
             label="Mô tả"
             value={menuForm.description}
             onChangeText={(text) => setMenuForm({ ...menuForm, description: text })}
@@ -157,18 +185,28 @@ const AddMenu = () => {
             dense
             autoCapitalize="sentences"
           />
-          <TextInput
-            label="Thời gian phục vụ"
-            value={menuForm.time_serve}
-            onChangeText={(text) => setMenuForm({ ...menuForm, time_serve: text })}
-            style={styles.input}
-            mode="outlined"
-            placeholder="VD: MORNING, NOON, EVENING, NIGHT"
-            dense
-            autoCapitalize="characters"
-          />
+          
+          {/* Time Serve Selector */}
+          <View style={styles.timeSelectorContainer}>
+            <Text style={styles.timeSelectorLabel}>Thời gian phục vụ *</Text>
+            <TouchableOpacity
+              style={styles.timeSelector}
+              onPress={() => {
+                console.log('Time selector pressed!'); // Debug log
+                setShowTimeModal(true);
+              }}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.timeSelectorText}>
+                {getSelectedTimeLabel()}
+              </Text>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </TouchableOpacity>
+          </View>
+          
           <View style={styles.switchContainer}>
-            <Paragraph style={styles.switchLabel}>Kích hoạt</Paragraph>
+            <Paragraph style={styles.switchLabel}>Kích hoạt menu</Paragraph>
             <Switch
               value={menuForm.is_active}
               onValueChange={(value) => setMenuForm({ ...menuForm, is_active: value })}
@@ -177,6 +215,7 @@ const AddMenu = () => {
             />
           </View>
         </Card.Content>
+        
         <Card.Actions style={styles.actions}>
           <Button
             mode="outlined"
@@ -194,10 +233,72 @@ const AddMenu = () => {
             loading={loading}
             disabled={loading}
           >
-            Thêm
+            Thêm Menu
           </Button>
         </Card.Actions>
       </Card>
+
+      {/* Modal chọn thời gian phục vụ */}
+      <Modal
+        visible={showTimeModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          console.log('Modal close requested'); // Debug log
+          setShowTimeModal(false);
+        }}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowTimeModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContainer}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn thời gian phục vụ</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowTimeModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={timeServeOptions}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalOption,
+                    menuForm.time_serve === item.value && styles.selectedOption
+                  ]}
+                  onPress={() => {
+                    console.log('Selected time:', item.value); // Debug log
+                    handleSelectTime(item.value);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.modalOptionText,
+                    menuForm.time_serve === item.value && styles.selectedOptionText
+                  ]}>
+                    {item.label}
+                  </Text>
+                  {menuForm.time_serve === item.value && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+      
       <Toast />
     </View>
   );
@@ -243,15 +344,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     minHeight: 80,
   },
+  timeSelectorContainer: {
+    marginBottom: 16,
+  },
+  timeSelectorLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  timeSelector: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 48,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  timeSelectorText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 10,
+  },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginVertical: 8,
+    paddingVertical: 8,
   },
   switchLabel: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '500',
   },
   actions: {
     justifyContent: 'flex-end',
@@ -265,6 +404,80 @@ const styles = StyleSheet.create({
   actionButtonLabel: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Modal styles - tương tự EditMenu
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    margin: 20,
+    maxHeight: '70%',
+    width: '85%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: 'bold',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  selectedOption: {
+    backgroundColor: '#EBF8FF',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
+  },
+  selectedOptionText: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
   },
 });
 
